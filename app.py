@@ -6,11 +6,12 @@ import random
 import math
 
 # --- 1. KONFIGURATION & CSS ---
-st.set_page_config(page_title="Wien Öffis Live V5", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis Live V6", layout="wide", page_icon="🚋")
 
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; }
+    
     /* Pfeil-Icon Stil */
     .arrow-icon {
         display: flex; justify-content: center; align-items: center;
@@ -18,6 +19,7 @@ st.markdown("""
         font-size: 24px; text-shadow: 0 0 3px white;
         transition: all 0.3s ease;
     }
+    
     /* Runder Stations-Marker Stil */
     .station-cluster-icon {
         display: flex; justify-content: center; align-items: center;
@@ -28,7 +30,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🇦🇹 Wiener Linien Monitor (Stabil)")
+st.title("🇦🇹 Wiener Linien Monitor (Design-Update)")
 
 # --- STATIONEN ---
 STATIONS = {
@@ -37,17 +39,22 @@ STATIONS = {
     "Stephansplatz (U1, U3)": [4200, 4206]
 }
 
-# --- ROUTEN (SIMULATION) ---
+# --- ROUTEN (SIMULATION - Runde Ecken) ---
+# Ich habe ein paar Zwischenpunkte eingefügt, damit es "kurviger" wirkt
 ROUTES = {
     "1": [ 
-        [48.2114, 16.3783], [48.2130, 16.3760], [48.2166, 16.3730], 
-        [48.2160, 16.3690], [48.2150, 16.3650], [48.2110, 16.3600], 
-        [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750]
+        [48.2114, 16.3783], [48.2120, 16.3775], [48.2130, 16.3760], # Schwedenplatz Kurve
+        [48.2150, 16.3745], [48.2166, 16.3730], # Kai
+        [48.2163, 16.3710], [48.2160, 16.3690], # Börse Kurve
+        [48.2155, 16.3670], [48.2150, 16.3650], [48.2110, 16.3600], # Ring
+        [48.2080, 16.3600], [48.2050, 16.3600], [48.2035, 16.3640], # Burgtor Kurve
+        [48.2020, 16.3680], [48.2025, 16.3715], [48.2030, 16.3750]  # Oper
     ],
     "U4": [ 
-        [48.2250, 16.3600], [48.2180, 16.3650], 
-        [48.2166, 16.3730], [48.2114, 16.3783], 
-        [48.2082, 16.3738], [48.2000, 16.3600], 
+        [48.2250, 16.3600], [48.2215, 16.3625], [48.2180, 16.3650], 
+        [48.2173, 16.3690], [48.2166, 16.3730], [48.2140, 16.3756], 
+        [48.2114, 16.3783], [48.2098, 16.3760], [48.2082, 16.3738], 
+        [48.2041, 16.3669], [48.2000, 16.3600], [48.1950, 16.3550],
         [48.1900, 16.3500] 
     ]
 }
@@ -55,13 +62,18 @@ ROUTES = {
 # --- 2. HILFSFUNKTIONEN ---
 
 def get_line_color(line, v_type):
-    colors = {"U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", 
-              "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643"}
+    colors = {
+        "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", 
+        "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643"
+    }
     if line in colors: return colors[line]
-    if "ptTram" in v_type or line in ["1", "2", "D", "71"]: return "#009641"
-    if "ptBus" in v_type: return "#000000"
-    if "ptMetro" in v_type: return "#E2021A"
-    if "ptTrain" in v_type: return "#00549F"
+    
+    # ÄNDERUNG: Straßenbahn jetzt Hellrot (#FF5C5C)
+    if "ptTram" in v_type or line in ["1", "2", "D", "71"]: return "#FF5C5C"
+    
+    if "ptBus" in v_type: return "#000000"   # Bus Schwarz
+    if "ptMetro" in v_type: return "#E2021A" # Fallback U-Bahn
+    if "ptTrain" in v_type: return "#00549F" # S-Bahn Blau
     return "gray"
 
 def calculate_bearing(pointA, pointB):
@@ -109,12 +121,21 @@ live_vehicles.sort(key=lambda x: x["time"], reverse=True)
 
 m = folium.Map(location=[48.2100, 16.3700], zoom_start=14, tiles="CartoDB positron")
 
-# Routen
+# Routen Zeichnen
 for line_name, coords in ROUTES.items():
     l_type = "ptMetro" if "U" in line_name else "ptTram"
-    folium.PolyLine(coords, color=get_line_color(line_name, l_type), weight=4, opacity=0.4).add_to(m)
+    
+    # ÄNDERUNG: line_join='round' und line_cap='round' machen die Ecken weicher
+    folium.PolyLine(
+        coords, 
+        color=get_line_color(line_name, l_type), 
+        weight=5, 
+        opacity=0.6,
+        line_join='round',
+        line_cap='round' 
+    ).add_to(m)
 
-# Fahrzeuge
+# Fahrzeuge Zeichnen
 for v in live_vehicles:
     color = get_line_color(v["line"], v["type"])
     popup_txt = f"<b>{v['line']}</b> ➤ {v['dest']}<br>in {v['time']} min"
@@ -144,10 +165,9 @@ for v in live_vehicles:
             icon=folium.DivIcon(html=html_cluster, icon_size=(30,30))
         ).add_to(m)
 
-# WICHTIG: returned_objects=[] verhindert, dass Streamlit beim Klicken neu lädt -> KEIN FLACKERN!
 st_folium(m, width="100%", height=500, returned_objects=[])
 
-# --- 4. LISTE (Wieder da!) ---
+# --- 4. LISTE ---
 
 # Sortierung für Liste (Schnellste zuerst)
 live_vehicles.sort(key=lambda x: x["time"])
@@ -156,6 +176,7 @@ st.subheader("⏱️ Nächste Abfahrten")
 for v in live_vehicles:
     c = get_line_color(v["line"], v["type"])
     ac_icon = "❄️" if v["ac"] else "🌡️"
+    time_color = '#d32f2f' if v['time'] <= 2 else '#2e7d32'
     
     st.markdown(f"""
     <div style="border-left:5px solid {c}; background:#f9f9f9; padding:10px; margin-bottom:8px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
@@ -164,4 +185,9 @@ for v in live_vehicles:
             <span style="font-size:0.8em; color:#666;">{ac_icon} {v['type']}</span>
         </div>
         <div style="text-align:right;">
-            <span style="font-size:1.2em; font-weight:bold; color:{'#d32f2
+            <span style="font-size:1.2em; font-weight:bold; color:{time_color}">
+                {v['time']} min
+            </span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
