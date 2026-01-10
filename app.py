@@ -4,159 +4,145 @@ from streamlit_folium import st_folium
 import requests
 import math
 
-# --- 1. KONFIGURATION & CSS (PIXEL ART STYLE) ---
-st.set_page_config(page_title="Wien Öffis V8", layout="wide", page_icon="🚋")
+# --- 1. SETUP & CSS (PIXEL ART & SCHILDER) ---
+st.set_page_config(page_title="Wien Öffis Master", layout="wide", page_icon="🚋")
 
 st.markdown("""
     <style>
-    .block-container { padding-top: 1rem; }
+    .block-container { padding-top: 0rem; }
     
-    /* BASIS ZUG KÖRPER */
+    /* --- FAHRZEUG STYLES (Pixel Art Nachbau) --- */
     .train-body {
-        width: 44px; height: 24px;
-        border: 2px solid #333;
-        border-radius: 4px;
-        display: flex; flex-direction: column;
-        justify-content: space-between;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
-        font-family: sans-serif; font-weight: bold; font-size: 9px;
-        overflow: hidden;
+        height: 22px; width: 46px;
+        border: 2px solid #222; border-radius: 4px;
+        display: flex; flex-direction: column; justify-content: space-between;
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        font-family: monospace; font-weight: bold; font-size: 9px;
+        overflow: hidden; position: relative;
     }
+    .windows { height: 8px; width: 100%; background: #333; margin-top: 3px; opacity: 0.9; }
     
-    /* FENSTERBAND (Damit es wie ein Zug aussieht) */
-    .windows {
-        height: 8px; width: 100%;
-        background: #333;
-        margin-top: 4px;
-        opacity: 0.8;
-    }
+    /* U-BAHN: Silberpfeil (Type U) */
+    .type-u { background: linear-gradient(180deg, #ccc 0%, #999 100%); color: black; }
     
-    /* FAHRZEUG TYPEN (Farben gemäß deinem Bild) */
-    
-    /* Silberpfeil (Type U): Grau */
-    .type-u { 
-        background: linear-gradient(180deg, #d0d0d0 0%, #a0a0a0 100%); 
-        color: black; 
-    }
-    
-    /* V-Wagen: Silber mit roten Türen/Akzenten */
+    /* U-BAHN: V-Wagen (Rot/Silber Streifen) */
     .type-v { 
-        background: linear-gradient(90deg, #e0e0e0 0%, #e0e0e0 20%, #d32f2f 20%, #d32f2f 30%, #e0e0e0 30%, #e0e0e0 70%, #d32f2f 70%, #d32f2f 80%, #e0e0e0 80%);
+        background: linear-gradient(90deg, #ccc 0%, #ccc 15%, #d32f2f 15%, #d32f2f 25%, #ccc 25%, #ccc 75%, #d32f2f 75%, #d32f2f 85%, #ccc 85%);
         color: black; 
     }
     
-    /* Straßenbahn (E2): Rot-Weiß */
-    .type-bim-old {
-        background: linear-gradient(180deg, #d32f2f 50%, #ffffff 50%);
-        color: white; 
-    }
-    
-    /* ULF/Flexity: Modernes Rot/Grau */
-    .type-ulf {
-        background: linear-gradient(90deg, #b71c1c 0%, #b71c1c 10%, #dddddd 10%, #dddddd 90%, #b71c1c 90%);
-        color: black; border-radius: 6px;
-    }
-    
-    /* S-Bahn: Blau/Weiß */
-    .type-sbahn {
-        background: linear-gradient(180deg, #00549F 50%, #ffffff 50%);
-        color: white;
+    /* U6: Type T/T1 (Kastiger, Weiß/Rot) */
+    .type-u6 {
+        background: linear-gradient(180deg, #fff 40%, #d32f2f 40%, #d32f2f 60%, #fff 60%);
+        color: black; border-radius: 2px;
     }
 
-    /* Label im Fahrzeug (Liniennummer) */
-    .veh-label {
-        text-align: center; width: 100%; margin-top: -2px; z-index: 2;
-        text-shadow: 0 0 2px white;
+    /* TRAM: Old (E2 - Rot/Weiß) */
+    .type-e2 { background: linear-gradient(180deg, #d32f2f 50%, #fff 50%); color: black; }
+
+    /* TRAM: ULF (Ultra Low Floor - Grau/Rot, schräge Front simulieren wir mit border) */
+    .type-ulf {
+        background: linear-gradient(90deg, #b71c1c 0%, #b71c1c 10%, #555 10%);
+        color: white; border-top-right-radius: 10px; border-bottom-right-radius: 0;
     }
+    
+    /* BUS */
+    .type-bus { background: #d32f2f; border-radius: 6px; color: white; }
+
+    /* --- HALTESTELLEN SCHILD (OVAL) --- */
+    .station-sign {
+        width: 34px; height: 24px;
+        background-color: #fdf5e6; /* Beige */
+        border: 3px solid #b22222; /* Dunkelrot */
+        border-radius: 50%; /* Oval */
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+        position: relative;
+    }
+    /* Schwarze Streifen (statt Text) */
+    .sign-stripe { width: 60%; height: 2px; background: black; margin: 2px 0; }
+    /* Wappen in der Mitte (Simuliert durch roten Kreis mit Kreuz) */
+    .sign-logo {
+        width: 8px; height: 9px;
+        background: #d32f2f;
+        border-radius: 2px; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px;
+        position: relative;
+    }
+    .sign-logo::after {
+        content: ""; position: absolute; top: 0; left: 3px; width: 2px; height: 9px; background: white;
+    }
+    .sign-logo::before {
+        content: ""; position: absolute; top: 3px; left: 0; width: 8px; height: 2px; background: white;
+    }
+
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🇦🇹 Wiener Linien Live-Map (Detail-Ansicht)")
+st.title("🇦🇹 Wiener Linien Live-Map (Vollständig)")
 
-# --- 2. FARBEN & ROUTEN DEFINITION ---
+# --- 2. DATEN: ROUTEN (Vollständig von Endstelle zu Endstelle) ---
+# Koordinaten sind vereinfacht, bilden aber die ganze Stadt ab.
 
-# Offizielle Linienfarben (Für die Strecke am Boden)
+RAW_ROUTES = {
+    # U-BAHNEN
+    "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2350, 16.4200], [48.2450, 16.4400], [48.2600, 16.4500]], # Oberlaa <-> Leopoldau
+    "U2": [[48.2200, 16.5100], [48.2150, 16.4500], [48.2180, 16.4200], [48.2180, 16.3900], [48.2150, 16.3610], [48.2100, 16.3570], [48.2070, 16.3580], [48.2000, 16.3690]], # Seestadt <-> Karlsplatz
+    "U3": [[48.2110, 16.3100], [48.1960, 16.3350], [48.1950, 16.3500], [48.2082, 16.3738], [48.2050, 16.3850], [48.1900, 16.4000], [48.1750, 16.4150]], # Ottakring <-> Simmering
+    "U4": [[48.2050, 16.2500], [48.1900, 16.2900], [48.1850, 16.3200], [48.1900, 16.3500], [48.2000, 16.3690], [48.2082, 16.3738], [48.2114, 16.3783], [48.2166, 16.3730], [48.2250, 16.3600], [48.2400, 16.3600]], # Hütteldorf <-> Heiligenstadt
+    "U6": [[48.1350, 16.3200], [48.1500, 16.3300], [48.1750, 16.3350], [48.1960, 16.3350], [48.2150, 16.3400], [48.2300, 16.3500], [48.2400, 16.3800], [48.2600, 16.4000]], # Siebenhirten <-> Floridsdorf
+    
+    # STRASSENBAHNEN (Ring & Co)
+    "1": [[48.2114, 16.3783], [48.2166, 16.3730], [48.2150, 16.3650], [48.2110, 16.3600], [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750], [48.2050, 16.3850], [48.2100, 16.3950]],
+    "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800]],
+    "2": [[48.2114, 16.3783], [48.2110, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400]],
+    "71": [[48.2160, 16.3690], [48.2050, 16.3600], [48.2020, 16.3680], [48.1950, 16.3900], [48.1800, 16.4100], [48.1600, 16.4400]]
+}
+
+# Stations-Marker Positionen & RBLs
+STATION_MARKERS = [
+    {"name": "Schwedenplatz", "lat": 48.2114, "lon": 16.3783, "lines": "U1, U4, 1, 2", "rbl": [4205, 4212, 4208, 4210]},
+    {"name": "Karlsplatz", "lat": 48.2000, "lon": 16.3690, "lines": "U1, U2, U4, WLB", "rbl": [4202, 4216, 4617, 4214]},
+    {"name": "Stephansplatz", "lat": 48.2082, "lon": 16.3738, "lines": "U1, U3", "rbl": [4200, 4206]},
+    {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "lines": "U3, U6, 5, 6, 9, 18", "rbl": [4920, 4921, 4600]},
+    {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "lines": "U2, D, 1, 71", "rbl": [4209, 4211]},
+    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "lines": "U3, U4, O", "rbl": [4204, 4213]},
+    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "lines": "U1, U2, 5, O", "rbl": [4207, 4105]}
+]
+
+# Farben
 LINE_COLORS = {
     "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", 
-    "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643",
-    "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C", # Bim Hellrot
-    "S": "#00549F"
+    "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643", # U6 Ocker
+    "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C"
 }
 
-# Koordinaten (Simulation der Strecken)
-# HINWEIS: Um ALLE Linien in ganz Wien zu haben, bräuchten wir externe Dateien.
-# Ich habe hier die U2 ergänzt, damit sie sichtbar wird.
-RAW_ROUTES = {
-    "1": [ # Ring
-        [48.2114, 16.3783], [48.2130, 16.3760], [48.2166, 16.3730], 
-        [48.2160, 16.3690], [48.2150, 16.3650], [48.2110, 16.3600], 
-        [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750]
-    ],
-    "U4": [ # Donaukanal
-        [48.2250, 16.3600], [48.2180, 16.3650], [48.2166, 16.3730], 
-        [48.2114, 16.3783], [48.2082, 16.3738], [48.2000, 16.3600], 
-        [48.1900, 16.3500] 
-    ],
-    "U2": [ # Schottentor -> Karlsplatz (Simulation)
-        [48.2150, 16.3610], # Schottentor
-        [48.2100, 16.3570], # Rathaus
-        [48.2070, 16.3580], # Volkstheater
-        [48.2020, 16.3610], # Museumsquartier
-        [48.2000, 16.3690]  # Karlsplatz
-    ]
-}
-
-STATIONS = {
-    "Zentrum (Schwedenpl/Stephanspl)": [4205, 4212, 4208, 4210, 4200, 4206],
-    "Karlsplatz (U1, U2, U4)": [4202, 4216, 4617],
-    "Schottentor (U2, Tram)": [4209, 4211] # Ergänzt für U2
-}
-
-# --- 3. HELFER: KURVEN & OPTIK ---
-
+# --- 3. HELPER ---
 def smooth_path(points):
-    """Macht eckige Pfade rund"""
+    """Fügt weiche Kurven zwischen Punkten ein"""
     if len(points) < 2: return points
     smoothed = []
     for i in range(len(points) - 1):
         p1 = points[i]
         p2 = points[i+1]
-        steps = 6 # Mehr Schritte = runder
+        steps = 8 # Runder
         for j in range(steps):
             f = j / steps
-            smoothed.append([
-                p1[0] * (1-f) + p2[0] * f,
-                p1[1] * (1-f) + p2[1] * f
-            ])
+            smoothed.append([p1[0]*(1-f)+p2[0]*f, p1[1]*(1-f)+p2[1]*f])
     smoothed.append(points[-1])
     return smoothed
 
 SMOOTH_ROUTES = {k: smooth_path(v) for k,v in RAW_ROUTES.items()}
 
 def get_css_class(line, v_type, features):
-    """Wählt das Design passend zum Fahrzeug"""
-    # U-BAHN
+    if line == "U6": return "type-u6"
     if "ptMetro" in v_type or "U" in line:
-        if line == "U6": return "type-u" # U6 (Typ T) sieht ähnlich aus wie Silberpfeil hier
-        # Wenn Barrierefrei/Rampe -> Vermutlich V-Wagen (Neuer)
         if features.get("foldingRamp") or features.get("barrierFree"): return "type-v"
-        return "type-u" # Silberpfeil
-    
-    # STRASSENBAHN
+        return "type-u"
     if "ptTram" in v_type:
         if features.get("foldingRamp"): return "type-ulf"
-        return "type-bim-old"
-    
-    # S-BAHN
-    if "S" in line: return "type-sbahn"
-    
-    return "type-ulf" # Fallback
-
-def get_line_color(line):
-    # Farbe aus Dictionary holen oder Fallback
-    if line in LINE_COLORS: return LINE_COLORS[line]
-    if "S" in line: return LINE_COLORS["S"]
-    return "#888888"
+        return "type-e2"
+    if "S" in line: return "type-u" # S-Bahn Fallback
+    return "type-bus"
 
 def calculate_bearing(p1, p2):
     lat1, lat2 = math.radians(p1[0]), math.radians(p2[0])
@@ -165,11 +151,14 @@ def calculate_bearing(p1, p2):
     y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
     return (math.degrees(math.atan2(x, y)) + 360) % 360
 
-# --- 4. API & LOGIK ---
-
-@st.cache_data(ttl=10)
-def fetch_data(rbls):
-    url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, rbls))}"
+# --- 4. API CALL ---
+@st.cache_data(ttl=12)
+def fetch_all_data():
+    # Alle RBLs sammeln
+    all_rbls = []
+    for s in STATION_MARKERS: all_rbls.extend(s["rbl"])
+    
+    url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, all_rbls))}"
     try:
         data = requests.get(url, timeout=5).json()
         vehicles = []
@@ -179,82 +168,4 @@ def fetch_data(rbls):
             for line in mon.get("lines", []):
                 for dep in line.get("departures", {}).get("departure", []):
                     countdown = dep.get("departureTime", {}).get("countdown", 99)
-                    if countdown > 25: continue
-                    vehicles.append({
-                        "line": line.get("name"), "type": line.get("type"),
-                        "dest": line.get("towards"), "time": countdown,
-                        "features": dep.get("vehicle", {}),
-                        "lat": slat, "lon": slon
-                    })
-        return vehicles
-    except: return []
-
-# Daten laden
-all_rbl = [id for ids in STATIONS.values() for id in ids]
-vehicles = fetch_data(all_rbl)
-vehicles.sort(key=lambda x: x["time"], reverse=True) # Sortieren für Z-Index
-
-# --- 5. KARTE ZEICHNEN ---
-
-m = folium.Map(location=[48.2080, 16.3700], zoom_start=14, tiles="CartoDB positron")
-
-# A) LINIEN NETZ (Boden)
-for line, path in SMOOTH_ROUTES.items():
-    color = get_line_color(line)
-    folium.PolyLine(path, color=color, weight=6, opacity=0.4, line_cap='round').add_to(m)
-
-# B) FAHRZEUGE
-for v in vehicles:
-    # Position berechnen
-    pos = [v["lat"], v["lon"]]
-    rot = 0
-    
-    # Haben wir eine Route für diese Linie? (z.B. U2, U4, 1)
-    if v["line"] in SMOOTH_ROUTES and v["time"] < 20:
-        path = SMOOTH_ROUTES[v["line"]]
-        # Index auf Route basierend auf Zeit
-        idx = min(v["time"] * 4, len(path)-2) # *4 wegen geglätteter Punkte
-        idx = max(0, int(idx))
-        pos = path[idx]
-        rot = calculate_bearing(path[idx], path[idx+1])
-    
-    # Design ermitteln
-    css_class = get_css_class(v["line"], v["type"], v["features"])
-    line_col = get_line_color(v["line"])
-    
-    # HTML ZUG ICON
-    # Wir fügen einen farbigen Rahmen in der Linienfarbe hinzu (border-color)
-    icon_html = f"""
-    <div style="transform: rotate({rot-90}deg);">
-        <div class="train-body {css_class}" style="border-color: {line_col};">
-            <div class="windows"></div>
-            <div class="veh-label">{v['line']}</div>
-        </div>
-    </div>
-    """
-    
-    popup = f"<b>{v['line']}</b> ➤ {v['dest']}<br>in {v['time']} min"
-    folium.Marker(pos, popup=popup, 
-                  icon=folium.DivIcon(html=icon_html, icon_size=(44,24), icon_anchor=(22,12))).add_to(m)
-
-st_folium(m, width="100%", height=500, returned_objects=[])
-
-# --- 6. INFO LISTE ---
-vehicles.sort(key=lambda x: x["time"])
-st.subheader("Fahrzeuge in Echtzeit")
-
-for v in vehicles:
-    col = get_line_color(v["line"])
-    type_name = "U-Bahn" if "ptMetro" in v["type"] else "Bim/Bus"
-    ac = "❄️" if v["features"].get("foldingRamp") else "🌡️"
-    
-    st.markdown(f"""
-    <div style="border-left: 6px solid {col}; background: white; padding: 12px; margin-bottom: 6px; box-shadow: 0 1px 3px #eee; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <strong style="font-size:1.2em; color:{col}">{v['line']}</strong> 
-            <span style="color:#555;">➜ {v['dest']}</span><br>
-            <small>{type_name} | {ac}</small>
-        </div>
-        <div style="font-size:1.4em; font-weight:bold;">{v['time']} <small style="font-size:0.5em">min</small></div>
-    </div>
-    """, unsafe_allow_html=True)
+                    if countdown >
