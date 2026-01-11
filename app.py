@@ -4,19 +4,26 @@ from streamlit_folium import st_folium
 import requests
 import math
 
-# --- 1. SETUP & NEUES CSS (Hintergrund-Streifen) ---
-st.set_page_config(page_title="Wien Öffis V14", layout="wide", page_icon="🚋")
+# --- 1. SETUP & CSS ---
+st.set_page_config(page_title="Wien Öffis V15", layout="wide", page_icon="🚋")
+
+# Versuch, GPS Modul zu laden (für Echtstandort)
+try:
+    from streamlit_js_eval import get_geolocation
+    HAS_GPS_MODULE = True
+except ImportError:
+    HAS_GPS_MODULE = False
 
 st.markdown("""
     <style>
-    .block-container { padding-top: 0rem; }
+    .block-container { padding-top: 1rem; }
     
-    /* FAHRZEUG BOX - Basis Design */
+    /* FAHRZEUG BOX */
     .veh-box {
-        width: 42px;  /* Etwas breiter für Text + Streifen */
-        height: 22px;
+        width: 44px;
+        height: 24px;
         border: 1px solid white;
-        box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -24,16 +31,16 @@ st.markdown("""
         font-weight: bold;
         font-size: 11px;
         color: white;
-        border-radius: 2px;
-        /* WICHTIG: Platz rechts für den Streifen lassen, damit Text nicht überlappt */
-        padding-right: 10px; 
-        /* Grundeinstellung für Hintergrundbild (der Streifen) */
+        border-radius: 3px;
+        padding-right: 10px; /* Platz für den Streifen rechts */
+        
+        /* HINTERGRUND-BILD FÜR DEN STRICH (Rechts fixiert) */
         background-repeat: no-repeat;
-        background-position: right top; /* Immer rechts fixiert */
-        background-size: 10px 100%; /* 10px breit, volle Höhe */
+        background-position: right top;
+        background-size: 10px 100%; 
     }
 
-    /* KLIMATISIERT: BLAU-WEISS GESTREIFTER HINTERGRUND */
+    /* KLIMATISIERT (Blau/Weiß) */
     .ac-yes-bg {
         background-image: repeating-linear-gradient(
             -45deg,
@@ -44,7 +51,7 @@ st.markdown("""
         );
     }
 
-    /* NICHT KLIMATISIERT: ROT-WEISS GESTREIFTER HINTERGRUND */
+    /* NICHT KLIMATISIERT (Rot/Weiß) */
     .ac-no-bg {
         background-image: repeating-linear-gradient(
             -45deg,
@@ -57,24 +64,18 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. NEUE LOGOS & DATEN ---
+# --- 2. KONFIGURATION & FARBEN ---
 
-# NEUES Station Logo (Kleineres Format)
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
-
-# NEUES Type V Logo (Wird aktuell nicht als Marker verwendet, da wir die CSS-Boxen für alle Züge nutzen, um den Richtungsstrich konsistent anzuzeigen)
-ICON_TYPE_V_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAICAIAAABh3dhzAAAAB3RJTUUH6gELByIbufKlvAAAAoZJREFUeJwFwUtvE1cUAOBz7p3ruWMPmdjjsT3EDxLCQ0iNBCFiB1WldtsdVTf9U0hdsWHbSuzYs4jEAgRIeZBA7VIbG8ePODN+zePOPf0+HF3ORqPR57PTvFXQBFprQEBERAQCQAACAMqINBESccYZY4igiYhIKXV+dp6lKQEgMm6w+lbDcTb2Dw4Mr7j557Nn8Xr9YP9gPB4N+gORE5yx1o1tpTUSASLjbDgYzMNAqcz1PM/z0jhmiDJfWC7n0XLBGOec1+v++dnnXpa9fPu22WoZQBRF6+cvXux8OA6G3677FadYGvzXnadUrNZ67Xblen29CLmKm82GzrLBxYCkE0dxvFrWGq2rYbfmbjpFNwzDMJiNx5c3b+1WSm670zYIQBjiUaV6z5JBxedC2ClVC7bghgFw13OlAZmdT0G6QsQAvu1YwiQptG0WDBZ5XsZApiph3HTLoZkvFWxCfXj42kDEOIl/efzkyf37neFwvVxJkUtUWnFLZi5nmqbKFDD2tdcFpTJNQua3fR8RkWGaJJMwmF3NpDC5ISxLrhYLpam2YY1AG+s42X+4//749A1jX5bzk6MjlaliqfTQK6dJNP3eRwacGcP+YL4IieBGq3U+z48mY8ZYza8mHI673cUqtCz71u5tIr3VaCylfPX3X2wyC3786ec/nj59tPfD6bv3mKhtf6t9fJIGQe3aRu/00/Tf3sU/HYsxf9Mt29e4ypplV0SREa33dnbD76N+p7Pt11eXl2cfP+zdvWNzfjWZ/Prb7/htONZaW5aU0pxOp47jbNqFr71+zsyVvLJEBAAAIAAFwAAIgAAEAABEmiYXF1mqWs16MF8sViuvWkmTVOYEAvwPrDxG5Tsp8voAAAAASUVORK5CYII="
-
-# Simulierte User Position (z.B. Nähe Stephansplatz)
-USER_LAT = 48.2090
-USER_LON = 16.3720
 
 LINE_COLORS = {
     "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643", 
-    "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C",
-    "S": "#00549F", "13A": "#E3001B", "40A": "#E3001B", "59A": "#E3001B"
+    "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C", "O": "#FF5C5C", "5": "#FF5C5C", "6": "#FF5C5C", "18": "#FF5C5C",
+    "S": "#00549F", "S1": "#00549F", "S2": "#00549F", "S3": "#00549F", "S4": "#00549F", "S7": "#00549F", "S45": "#00549F", "S50": "#00549F", "S80": "#00549F",
+    "13A": "#E3001B", "40A": "#E3001B", "59A": "#E3001B", "57A": "#E3001B"
 }
 
+# Erweiterte Routen (Bim & Bus hinzugefügt)
 RAW_ROUTES = {
     "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2450, 16.4400], [48.2600, 16.4500]], 
     "U2": [[48.2200, 16.5100], [48.2150, 16.4500], [48.2180, 16.4200], [48.2180, 16.3900], [48.2150, 16.3610], [48.2100, 16.3570], [48.2070, 16.3580], [48.2000, 16.3690]], 
@@ -84,7 +85,7 @@ RAW_ROUTES = {
     "1": [[48.2114, 16.3783], [48.2166, 16.3730], [48.2150, 16.3650], [48.2110, 16.3600], [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750], [48.2050, 16.3850], [48.2100, 16.3950]],
     "2": [[48.2250, 16.3800], [48.2114, 16.3783], [48.2080, 16.3700], [48.2050, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400], [48.2200, 16.3300]],
     "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800], [48.1830, 16.3800]],
-    "71": [[48.2160, 16.3690], [48.2050, 16.3600], [48.2020, 16.3680], [48.1950, 16.3900], [48.1800, 16.4100], [48.1600, 16.4400]],
+    "13A": [[48.2020, 16.3380], [48.1990, 16.3450], [48.1960, 16.3550], [48.1930, 16.3600], [48.1850, 16.3650]], # Beispielroute Bus
     "S": [[48.2600, 16.4000], [48.2400, 16.3800], [48.2180, 16.3900], [48.2060, 16.3850], [48.1850, 16.3800], [48.1700, 16.3700], [48.1500, 16.3200]] 
 }
 
@@ -95,10 +96,11 @@ STATION_MARKERS = [
     {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "rbl": [4920, 4921, 4600]},
     {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "rbl": [4209, 4211]},
     {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "rbl": [4204, 4213]},
-    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "rbl": [4207, 4105]}
+    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "rbl": [4207, 4105]},
+    {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "rbl": [267, 266]} # Bus Station Test
 ]
 
-# --- 3. HELFER & DISTANZ ---
+# --- 3. HELFER FUNKTIONEN ---
 
 def smooth_path(points):
     if len(points) < 2: return points
@@ -131,13 +133,44 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
-# --- 4. POSITION CHECK ---
+# --- 4. SIDEBAR: STANDORT SCHALTER ---
+
+with st.sidebar:
+    st.header("Einstellungen")
+    gps_mode = st.toggle("Echtstandort verwenden", value=False)
+    
+    user_lat, user_lon = 48.2082, 16.3738 # Default Stephansplatz
+    
+    if gps_mode:
+        st.write("📡 GPS Modus Aktiv")
+        if HAS_GPS_MODULE:
+            # Versucht GPS vom Browser zu holen
+            loc = get_geolocation()
+            if loc:
+                user_lat = loc['coords']['latitude']
+                user_lon = loc['coords']['longitude']
+                st.success(f"GPS gefunden: {user_lat:.4f}, {user_lon:.4f}")
+            else:
+                st.warning("Warte auf GPS...")
+        else:
+            st.error("Modul 'streamlit-js-eval' fehlt. Bitte installieren für echtes GPS.")
+            # Fallback Regler
+            user_lat = st.slider("Lat", 48.10, 48.30, 48.2082)
+            user_lon = st.slider("Lon", 16.20, 16.50, 16.3738)
+    else:
+        st.write("🧪 Testversion (Simuliert)")
+        # Simulierter fixer Standort für Test
+        user_lat = 48.2090
+        user_lon = 16.3720
+
+# --- 5. LOGIK: NÄHE & HEADER ---
+
 closest_station = None
 min_dist = 999999
 stations_with_dist = []
 
 for s in STATION_MARKERS:
-    dist = haversine(USER_LAT, USER_LON, s["lat"], s["lon"])
+    dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
     stations_with_dist.append({**s, "dist": dist})
     if dist < min_dist:
         min_dist = dist
@@ -145,14 +178,15 @@ for s in STATION_MARKERS:
 
 stations_with_dist.sort(key=lambda x: x["dist"])
 
+# Header Anzeige
 if min_dist < 100:
     st.success(f"📍 **Du befindest Dich in der Station {closest_station['name']}**")
 else:
-    st.info(f"🚶 Du bist unterwegs. Nächste Station: **{closest_station['name']}** ({int(min_dist)}m)")
+    st.info(f"🚶 Unterwegs. Nächste Station: **{closest_station['name']}** ({int(min_dist)}m)")
     near_str = " | ".join([f"{s['name']} ({int(s['dist'])}m)" for s in stations_with_dist[:3]])
     st.caption(f"Nahegelegene Stationen: {near_str}")
 
-# --- 5. API DATEN ---
+# --- 6. API DATEN (Alles laden) ---
 @st.cache_data(ttl=10)
 def fetch_all_data():
     all_rbls = []
@@ -171,6 +205,7 @@ def fetch_all_data():
             
             for line in mon.get("lines", []):
                 line_name = line.get("name")
+                # Wir filtern NICHT nach Type, nehmen alles (Bus, Tram, U-Bahn, S-Bahn)
                 departures = line.get("departures", {}).get("departure", [])
                 
                 for i, dep in enumerate(departures):
@@ -179,7 +214,7 @@ def fetch_all_data():
                     if isinstance(countdown, int) and countdown > 12: continue
                     
                     vehicle_info = dep.get("vehicle", {})
-                    # Prüfe auf Barrierefreiheit ODER Klapprampe als Indikator für Klima
+                    # Barrierefrei oder Klapprampe als Indikator für "Neu/Klima"
                     has_ac = vehicle_info.get("barrierFree", False) or vehicle_info.get("foldingRamp", False)
                     
                     vehicles.append({
@@ -195,35 +230,35 @@ def fetch_all_data():
 vehicles = fetch_all_data()
 vehicles.sort(key=lambda x: x["time"] if isinstance(x["time"], int) else 99)
 
-# --- 6. KARTE ---
-m = folium.Map(location=[USER_LAT, USER_LON], zoom_start=14, tiles="CartoDB positron")
+# --- 7. KARTE ---
+m = folium.Map(location=[user_lat, user_lon], zoom_start=14, tiles="CartoDB positron")
 
+# User Marker
 folium.Marker(
-    [USER_LAT, USER_LON],
+    [user_lat, user_lon],
     tooltip="Deine Position",
     icon=folium.Icon(color="blue", icon="user", prefix="fa")
 ).add_to(m)
 
+# Linien zeichnen
 for line, path in SMOOTH_ROUTES.items():
-    color = LINE_COLORS.get(line, "#888")
-    if "S" in line: color = LINE_COLORS["S"]
+    color = LINE_COLORS.get(line, "#888") # Fallback Grau
+    if "S" in line: color = LINE_COLORS["S"] # S-Bahn Blau
     folium.PolyLine(path, color=color, weight=4, opacity=0.4).add_to(m)
 
+# Stationen Marker
 for s in STATION_MARKERS:
-    # Neues Logo, Größe angepasst (20x12)
-    icon = folium.CustomIcon(
-        ICON_STATION_B64,
-        icon_size=(20, 12),
-        icon_anchor=(10, 6)
-    )
+    icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
     folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon).add_to(m)
 
+# Fahrzeuge Marker
 for v in vehicles:
     pos = [v["lat"], v["lon"]]
     rot = 0
     
+    # Pfad Interpolation für Position
     route_key = v["line"]
-    if "S" in route_key: route_key = "S"
+    if "S" in route_key and "45" not in route_key and "50" not in route_key: route_key = "S" # Stammstrecke
     
     if route_key in SMOOTH_ROUTES and isinstance(v["time"], int):
         path = SMOOTH_ROUTES[route_key]
@@ -232,14 +267,13 @@ for v in vehicles:
         pos = path[idx]
         rot = calculate_bearing(path[idx], path[idx+1])
     
-    l_color = LINE_COLORS.get(v["line"], "#333")
+    # Farbe bestimmen
+    l_color = LINE_COLORS.get(v["line"], "#555")
     if "S" in v["line"]: l_color = LINE_COLORS["S"]
     if "A" in v["line"]: l_color = LINE_COLORS["13A"]
 
-    # Bestimme die CSS-Klasse für den Hintergrund-Streifen
     bg_class = "ac-yes-bg" if v["ac"] else "ac-no-bg"
     
-    # HTML Box: Hintergrundfarbe + Hintergrundbild-Klasse
     icon_html = f"""
     <div style="transform: rotate({rot-90}deg);">
         <div class="veh-box {bg_class}" style="background-color: {l_color};">
@@ -251,7 +285,7 @@ for v in vehicles:
     folium.Marker(
         pos, 
         popup=f"{v['line']} -> {v['dest']} ({v['time']}m)",
-        icon=folium.DivIcon(html=icon_html, icon_size=(42,24), icon_anchor=(21,12))
+        icon=folium.DivIcon(html=icon_html, icon_size=(44,24), icon_anchor=(22,12))
     ).add_to(m)
 
 st_folium(m, width="100%", height=600, returned_objects=[])
