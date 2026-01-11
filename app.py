@@ -5,9 +5,9 @@ import requests
 import math
 
 # --- 1. SETUP & CSS ---
-st.set_page_config(page_title="Wien Öffis V15", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V16", layout="wide", page_icon="🚋")
 
-# Versuch, GPS Modul zu laden (für Echtstandort)
+# Versuch, GPS Modul zu laden
 try:
     from streamlit_js_eval import get_geolocation
     HAS_GPS_MODULE = True
@@ -75,7 +75,6 @@ LINE_COLORS = {
     "13A": "#E3001B", "40A": "#E3001B", "59A": "#E3001B", "57A": "#E3001B"
 }
 
-# Erweiterte Routen (Bim & Bus hinzugefügt)
 RAW_ROUTES = {
     "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2450, 16.4400], [48.2600, 16.4500]], 
     "U2": [[48.2200, 16.5100], [48.2150, 16.4500], [48.2180, 16.4200], [48.2180, 16.3900], [48.2150, 16.3610], [48.2100, 16.3570], [48.2070, 16.3580], [48.2000, 16.3690]], 
@@ -85,7 +84,7 @@ RAW_ROUTES = {
     "1": [[48.2114, 16.3783], [48.2166, 16.3730], [48.2150, 16.3650], [48.2110, 16.3600], [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750], [48.2050, 16.3850], [48.2100, 16.3950]],
     "2": [[48.2250, 16.3800], [48.2114, 16.3783], [48.2080, 16.3700], [48.2050, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400], [48.2200, 16.3300]],
     "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800], [48.1830, 16.3800]],
-    "13A": [[48.2020, 16.3380], [48.1990, 16.3450], [48.1960, 16.3550], [48.1930, 16.3600], [48.1850, 16.3650]], # Beispielroute Bus
+    "13A": [[48.2020, 16.3380], [48.1990, 16.3450], [48.1960, 16.3550], [48.1930, 16.3600], [48.1850, 16.3650]], 
     "S": [[48.2600, 16.4000], [48.2400, 16.3800], [48.2180, 16.3900], [48.2060, 16.3850], [48.1850, 16.3800], [48.1700, 16.3700], [48.1500, 16.3200]] 
 }
 
@@ -97,7 +96,7 @@ STATION_MARKERS = [
     {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "rbl": [4209, 4211]},
     {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "rbl": [4204, 4213]},
     {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "rbl": [4207, 4105]},
-    {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "rbl": [267, 266]} # Bus Station Test
+    {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "rbl": [267, 266]}
 ]
 
 # --- 3. HELFER FUNKTIONEN ---
@@ -144,7 +143,6 @@ with st.sidebar:
     if gps_mode:
         st.write("📡 GPS Modus Aktiv")
         if HAS_GPS_MODULE:
-            # Versucht GPS vom Browser zu holen
             loc = get_geolocation()
             if loc:
                 user_lat = loc['coords']['latitude']
@@ -153,13 +151,11 @@ with st.sidebar:
             else:
                 st.warning("Warte auf GPS...")
         else:
-            st.error("Modul 'streamlit-js-eval' fehlt. Bitte installieren für echtes GPS.")
-            # Fallback Regler
+            st.error("Modul 'streamlit-js-eval' fehlt.")
             user_lat = st.slider("Lat", 48.10, 48.30, 48.2082)
             user_lon = st.slider("Lon", 16.20, 16.50, 16.3738)
     else:
         st.write("🧪 Testversion (Simuliert)")
-        # Simulierter fixer Standort für Test
         user_lat = 48.2090
         user_lon = 16.3720
 
@@ -178,7 +174,6 @@ for s in STATION_MARKERS:
 
 stations_with_dist.sort(key=lambda x: x["dist"])
 
-# Header Anzeige
 if min_dist < 100:
     st.success(f"📍 **Du befindest Dich in der Station {closest_station['name']}**")
 else:
@@ -186,7 +181,7 @@ else:
     near_str = " | ".join([f"{s['name']} ({int(s['dist'])}m)" for s in stations_with_dist[:3]])
     st.caption(f"Nahegelegene Stationen: {near_str}")
 
-# --- 6. API DATEN (Alles laden) ---
+# --- 6. API DATEN ---
 @st.cache_data(ttl=10)
 def fetch_all_data():
     all_rbls = []
@@ -205,7 +200,6 @@ def fetch_all_data():
             
             for line in mon.get("lines", []):
                 line_name = line.get("name")
-                # Wir filtern NICHT nach Type, nehmen alles (Bus, Tram, U-Bahn, S-Bahn)
                 departures = line.get("departures", {}).get("departure", [])
                 
                 for i, dep in enumerate(departures):
@@ -214,7 +208,6 @@ def fetch_all_data():
                     if isinstance(countdown, int) and countdown > 12: continue
                     
                     vehicle_info = dep.get("vehicle", {})
-                    # Barrierefrei oder Klapprampe als Indikator für "Neu/Klima"
                     has_ac = vehicle_info.get("barrierFree", False) or vehicle_info.get("foldingRamp", False)
                     
                     vehicles.append({
@@ -233,32 +226,27 @@ vehicles.sort(key=lambda x: x["time"] if isinstance(x["time"], int) else 99)
 # --- 7. KARTE ---
 m = folium.Map(location=[user_lat, user_lon], zoom_start=14, tiles="CartoDB positron")
 
-# User Marker
+# A) User Marker
 folium.Marker(
     [user_lat, user_lon],
     tooltip="Deine Position",
-    icon=folium.Icon(color="blue", icon="user", prefix="fa")
+    icon=folium.Icon(color="blue", icon="user", prefix="fa"),
+    z_index_offset=1100 # Noch höher als Stationen
 ).add_to(m)
 
-# Linien zeichnen
+# B) Linien
 for line, path in SMOOTH_ROUTES.items():
-    color = LINE_COLORS.get(line, "#888") # Fallback Grau
-    if "S" in line: color = LINE_COLORS["S"] # S-Bahn Blau
+    color = LINE_COLORS.get(line, "#888")
+    if "S" in line: color = LINE_COLORS["S"]
     folium.PolyLine(path, color=color, weight=4, opacity=0.4).add_to(m)
 
-# Stationen Marker
-for s in STATION_MARKERS:
-    icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
-    folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon).add_to(m)
-
-# Fahrzeuge Marker
+# C) Fahrzeuge (z-Index Standard)
 for v in vehicles:
     pos = [v["lat"], v["lon"]]
     rot = 0
     
-    # Pfad Interpolation für Position
     route_key = v["line"]
-    if "S" in route_key and "45" not in route_key and "50" not in route_key: route_key = "S" # Stammstrecke
+    if "S" in route_key and "45" not in route_key and "50" not in route_key: route_key = "S" 
     
     if route_key in SMOOTH_ROUTES and isinstance(v["time"], int):
         path = SMOOTH_ROUTES[route_key]
@@ -267,7 +255,6 @@ for v in vehicles:
         pos = path[idx]
         rot = calculate_bearing(path[idx], path[idx+1])
     
-    # Farbe bestimmen
     l_color = LINE_COLORS.get(v["line"], "#555")
     if "S" in v["line"]: l_color = LINE_COLORS["S"]
     if "A" in v["line"]: l_color = LINE_COLORS["13A"]
@@ -286,6 +273,16 @@ for v in vehicles:
         pos, 
         popup=f"{v['line']} -> {v['dest']} ({v['time']}m)",
         icon=folium.DivIcon(html=icon_html, icon_size=(44,24), icon_anchor=(22,12))
+    ).add_to(m)
+
+# D) Stationen (HOHER Z-INDEX DAMIT SIE ÜBER FAHRZEUGEN LIEGEN)
+for s in STATION_MARKERS:
+    icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
+    folium.Marker(
+        [s["lat"], s["lon"]], 
+        popup=s['name'], 
+        icon=icon,
+        z_index_offset=1000 # HIER: Zwingt Station in den Vordergrund
     ).add_to(m)
 
 st_folium(m, width="100%", height=600, returned_objects=[])
