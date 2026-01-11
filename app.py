@@ -7,7 +7,7 @@ import pandas as pd
 import io
 
 # --- 1. SETUP & CSS ---
-st.set_page_config(page_title="Wien Öffis V19 (Stable URLs)", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V20 (Bugfix Spalten)", layout="wide", page_icon="🚋")
 
 try:
     from streamlit_js_eval import get_geolocation
@@ -34,7 +34,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATEN & LOGOS ---
+# --- 2. LOGOS & FARBEN ---
 
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 
@@ -44,42 +44,38 @@ TYPE_COLORS = {
     "ptMetro": "#A365A4", "ptTrainS": "#00549F"
 }
 
-# --- 3. DATA LOADER (REPARIERT: Stabile URLs) ---
+# --- 3. DATA LOADER ---
 @st.cache_data(ttl=3600, show_spinner="Lade Netzdaten der Stadt Wien...") 
 def load_network_data():
-    """Lädt Stationen, Steige und Linien von data.wien.gv.at"""
-    
-    # NEUE, STABILE URLS
     url_haltestellen = "https://data.wien.gv.at/csv/wienerlinien-ogd-haltestellen.csv"
     url_steige = "https://data.wien.gv.at/csv/wienerlinien-ogd-steige.csv"
     url_linien = "https://data.wien.gv.at/csv/wienerlinien-ogd-linien.csv"
 
     try:
-        # Load Haltestellen
+        # Haltestellen (Enthält WGS84_LAT)
         s_h = requests.get(url_haltestellen, timeout=10).content
         df_h = pd.read_csv(io.StringIO(s_h.decode('utf-8')), sep=';')
         
-        # Load Steige
+        # Steige (Enthält STEIG_WGS84_LAT)
         s_s = requests.get(url_steige, timeout=10).content
         df_s = pd.read_csv(io.StringIO(s_s.decode('utf-8')), sep=';')
         
-        # Load Linien
+        # Linien
         s_l = requests.get(url_linien, timeout=10).content
         df_l = pd.read_csv(io.StringIO(s_l.decode('utf-8')), sep=';')
         
-        # Merge Steige + Linien Info
+        # Merge Steige + Linien
         df_full = df_s.merge(df_l, left_on='FK_LINIEN_ID', right_on='LINIEN_ID', how='left')
         
         return df_h, df_full
     except Exception as e:
-        st.error(f"⚠️ Netzwerkfehler beim Laden der Wiener Linien Datenbank: {e}")
-        # Leere Dataframes zurückgeben, damit App nicht abstürzt
+        st.error(f"⚠️ Netzwerkfehler Datenbank: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
 # Load Data once
 df_stations, df_steige = load_network_data()
 
-# --- 4. GEOMETRIE HELFER ---
+# --- 4. GEOMETRIE HELFER & SUCHE ---
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -93,41 +89,54 @@ def haversine(lat1, lon1, lat2, lon2):
 def get_nearby_rbls_and_lines(lat, lon, radius=500):
     if df_stations.empty or df_steige.empty: return [], [], []
     
-    # 1. Filtere Haltestellen im Radius (Box-Suche)
+    # 1. Filtere Haltestellen (df_stations hat Spalten WGS84_LAT / WGS84_LON)
     lat_min, lat_max = lat - 0.01, lat + 0.01
     lon_min, lon_max = lon - 0.015, lon + 0.015
     
+    # HIER WAR DER FEHLER: Wir nutzen jetzt die korrekten Spaltennamen der Haltestellen-CSV
     nearby_h = df_stations[
-        (df_stations['STEIG_WGS84_LAT'] > lat_min) & (df_stations['STEIG_WGS84_LAT'] < lat_max) &
-        (df_stations['STEIG_WGS84_LON'] > lon_min) & (df_stations['STEIG_WGS84_LON'] < lon_max)
+        (df_stations['WGS84_LAT'] > lat_min) & (df_stations['WGS84_LAT'] < lat_max) &
+        (df_stations['WGS84_LON'] > lon_min) & (df_stations['WGS84_LON'] < lon_max)
     ].copy()
     
     if nearby_h.empty: return [], [], []
 
     # Exakte Distanz
-    nearby_h['dist'] = nearby_h.apply(lambda row: haversine(lat, lon, row['STEIG_WGS84_LAT'], row['STEIG_WGS84_LON']), axis=1)
+    nearby_h['dist'] = nearby_h.apply(lambda row: haversine(lat, lon, row['WGS84_LAT'], row['WGS84_LON']), axis=1)
     nearby_h = nearby_h[nearby_h['dist'] <= radius].sort_values('dist')
     
     if nearby_h.empty: return [], [], []
 
     halt_ids = nearby_h['HALTESTELLEN_ID'].unique()
     
-    # 2. Steige und Linien finden
+    # 2. Steige und Linien finden (df_steige)
     relevant_steige = df_steige[df_steige['FK_HALTESTELLEN_ID'].isin(halt_ids)]
     
     rbl_list = relevant_steige['RBL_NUMMER'].dropna().unique().astype(int).tolist()
     line_ids = relevant_steige['LINIEN_ID'].unique()
     
-    return rbl_list, nearby_h.to_dict('records'), line_ids
+    # Für die Map verwenden wir die Koordinaten der Haltestellen (nicht der einzelnen Steige, das wäre zu voll)
+    # Mapping für Return
+    stations_output = []
+    for _, row in nearby_h.iterrows():
+        stations_output.append({
+            "HALTESTELLEN_NAME": row['HALTESTELLEN_NAME'],
+            "lat": row['WGS84_LAT'],
+            "lon": row['WGS84_LON'],
+            "dist": row['dist']
+        })
+    
+    return rbl_list, stations_output, line_ids
 
 def get_route_points_for_lines(line_ids):
-    """Holt ALLE Punkte (Stationen) für die gefundenen Linien, um sie zu zeichnen"""
+    """Holt ALLE Punkte (Stationen) für die gefundenen Linien aus der Steige-Tabelle"""
     if df_steige.empty: return {}
     
     routes = {}
     lines_data = df_steige[df_steige['LINIEN_ID'].isin(line_ids)]
     
     for lid in line_ids:
+        # Steige haben STEIG_WGS84_LAT
         points = lines_data[lines_data['LINIEN_ID'] == lid][['STEIG_WGS84_LAT', 'STEIG_WGS84_LON']].dropna()
         if not points.empty:
             line_name = lines_data[lines_data['LINIEN_ID'] == lid]['BEZEICHNUNG'].iloc[0]
@@ -169,7 +178,7 @@ if station_info:
     st.info(f"📍 Standort erkannt. Nächste Haltestelle: **{closest['HALTESTELLEN_NAME']}** ({int(closest['dist'])}m). Frage **{len(rbls)}** Steige ab.")
 else:
     if df_stations.empty:
-        st.warning("Datenbank konnte nicht geladen werden. Bitte Internet prüfen.")
+        st.warning("Datenbank lädt noch oder Fehler aufgetreten.")
     else:
         st.warning("Keine Haltestellen im Umkreis von 500m gefunden.")
 
@@ -177,7 +186,7 @@ else:
 def fetch_realtime_data(rbl_list):
     if not rbl_list: return []
     vehicles = []
-    chunk_size = 20
+    chunk_size = 20 # Batches
     
     for i in range(0, len(rbl_list), chunk_size):
         chunk = rbl_list[i:i+chunk_size]
@@ -228,7 +237,6 @@ for lid, data in route_geometries.items():
     elif "A" in l_name or "Bus" in l_name: color = "#E3001B"
     else: color = "#FF5C5C"
     
-    # Verlauf als Punkte-Wolke
     for p in data["points"]:
         folium.CircleMarker(location=p, radius=2, color=color, fill=True, fill_opacity=0.4, popup=f"Linie {l_name}", weight=0).add_to(m)
 
@@ -236,7 +244,7 @@ for lid, data in route_geometries.items():
 for s in station_info:
     icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
     folium.Marker(
-        [s['STEIG_WGS84_LAT'], s['STEIG_WGS84_LON']],
+        [s['lat'], s['lon']],
         popup=s['HALTESTELLEN_NAME'],
         icon=icon,
         z_index_offset=1000
@@ -250,7 +258,6 @@ for v in vehicles:
     elif "ptMetro" in v["type"]: v_color = TYPE_COLORS["ptMetro"]
     elif "ptTrain" in v["type"]: v_color = TYPE_COLORS["ptTrainS"]
     
-    # U-Bahn Override
     if "U1" in v["line"]: v_color = "#E2021A"
     if "U2" in v["line"]: v_color = "#A365A4"
     if "U3" in v["line"]: v_color = "#F67F21"
