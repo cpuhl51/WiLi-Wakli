@@ -3,12 +3,11 @@ import folium
 from streamlit_folium import st_folium
 import requests
 import math
-import pandas as pd
-import io
 
 # --- 1. SETUP & CSS ---
-st.set_page_config(page_title="Wien Öffis V20 (Bugfix Spalten)", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V17", layout="wide", page_icon="🚋")
 
+# Versuch, GPS Modul zu laden (für Echtstandort)
 try:
     from streamlit_js_eval import get_geolocation
     HAS_GPS_MODULE = True
@@ -21,61 +20,114 @@ st.markdown("""
     
     /* FAHRZEUG BOX */
     .veh-box {
-        width: 44px; height: 24px;
+        width: 44px;
+        height: 24px;
         border: 1px solid white;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
-        display: flex; align-items: center; justify-content: center;
-        font-family: sans-serif; font-weight: bold; font-size: 11px;
-        color: white; border-radius: 3px; padding-right: 10px;
-        background-repeat: no-repeat; background-position: right top; background-size: 10px 100%; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: sans-serif;
+        font-weight: bold;
+        font-size: 11px;
+        color: white;
+        border-radius: 3px;
+        padding-right: 10px; /* Platz für den Streifen rechts */
+        
+        /* HINTERGRUND-BILD FÜR DEN STRICH (Rechts fixiert) */
+        background-repeat: no-repeat;
+        background-position: right top;
+        background-size: 10px 100%; 
     }
-    .ac-yes-bg { background-image: repeating-linear-gradient(-45deg, #0066b3, #0066b3 3px, #ffffff 3px, #ffffff 6px); }
-    .ac-no-bg { background-image: repeating-linear-gradient(-45deg, #d32f2f, #d32f2f 3px, #ffffff 3px, #ffffff 6px); }
+
+    /* KLIMATISIERT (Blau/Weiß) */
+    .ac-yes-bg {
+        background-image: repeating-linear-gradient(
+            -45deg,
+            #0066b3,
+            #0066b3 3px,
+            #ffffff 3px,
+            #ffffff 6px
+        );
+    }
+
+    /* NICHT KLIMATISIERT (Rot/Weiß) */
+    .ac-no-bg {
+        background-image: repeating-linear-gradient(
+            -45deg,
+            #d32f2f,
+            #d32f2f 3px,
+            #ffffff 3px,
+            #ffffff 6px
+        );
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. LOGOS & FARBEN ---
+# --- 2. LOGO & FARBEN ---
 
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 
-TYPE_COLORS = {
-    "ptBusCity": "#E3001B", "ptBusNight": "#182C52", 
-    "ptTram": "#FF5C5C", "ptTramWLB": "#00549F",
-    "ptMetro": "#A365A4", "ptTrainS": "#00549F"
+LINE_COLORS = {
+    "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643", 
+    "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C", "O": "#FF5C5C", "5": "#FF5C5C", "6": "#FF5C5C", "18": "#FF5C5C", "43": "#FF5C5C",
+    "S": "#00549F", "S45": "#00549F", "S50": "#00549F", 
+    "13A": "#E3001B", "40A": "#E3001B", "59A": "#E3001B", "57A": "#E3001B"
 }
 
-# --- 3. DATA LOADER ---
-@st.cache_data(ttl=3600, show_spinner="Lade Netzdaten der Stadt Wien...") 
-def load_network_data():
-    url_haltestellen = "https://data.wien.gv.at/csv/wienerlinien-ogd-haltestellen.csv"
-    url_steige = "https://data.wien.gv.at/csv/wienerlinien-ogd-steige.csv"
-    url_linien = "https://data.wien.gv.at/csv/wienerlinien-ogd-linien.csv"
+# Routen (Vereinfacht für Darstellung)
+RAW_ROUTES = {
+    "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2450, 16.4400], [48.2600, 16.4500]], 
+    "U2": [[48.2200, 16.5100], [48.2150, 16.4500], [48.2180, 16.4200], [48.2180, 16.3900], [48.2150, 16.3610], [48.2100, 16.3570], [48.2070, 16.3580], [48.2000, 16.3690]], 
+    "U3": [[48.2110, 16.3100], [48.1960, 16.3350], [48.1950, 16.3500], [48.2082, 16.3738], [48.2060, 16.3850], [48.1900, 16.4000], [48.1750, 16.4150]], 
+    "U4": [[48.2050, 16.2500], [48.1900, 16.2900], [48.1850, 16.3200], [48.1900, 16.3500], [48.2000, 16.3690], [48.2082, 16.3738], [48.2114, 16.3783], [48.2166, 16.3730], [48.2250, 16.3600], [48.2400, 16.3600]], 
+    "U6": [[48.1350, 16.3200], [48.1500, 16.3300], [48.1750, 16.3350], [48.1960, 16.3350], [48.2150, 16.3400], [48.2300, 16.3500], [48.2400, 16.3800], [48.2600, 16.4000]], 
+    "1": [[48.2114, 16.3783], [48.2166, 16.3730], [48.2150, 16.3650], [48.2110, 16.3600], [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750], [48.2050, 16.3850], [48.2100, 16.3950]],
+    "2": [[48.2250, 16.3800], [48.2114, 16.3783], [48.2080, 16.3700], [48.2050, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400], [48.2200, 16.3300]],
+    "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800], [48.1830, 16.3800]],
+    "13A": [[48.2020, 16.3380], [48.1990, 16.3450], [48.1960, 16.3550], [48.1930, 16.3600], [48.1850, 16.3650]], 
+    "S": [[48.2600, 16.4000], [48.2400, 16.3800], [48.2180, 16.3900], [48.2060, 16.3850], [48.1850, 16.3800], [48.1700, 16.3700], [48.1500, 16.3200]] 
+}
 
-    try:
-        # Haltestellen (Enthält WGS84_LAT)
-        s_h = requests.get(url_haltestellen, timeout=10).content
-        df_h = pd.read_csv(io.StringIO(s_h.decode('utf-8')), sep=';')
-        
-        # Steige (Enthält STEIG_WGS84_LAT)
-        s_s = requests.get(url_steige, timeout=10).content
-        df_s = pd.read_csv(io.StringIO(s_s.decode('utf-8')), sep=';')
-        
-        # Linien
-        s_l = requests.get(url_linien, timeout=10).content
-        df_l = pd.read_csv(io.StringIO(s_l.decode('utf-8')), sep=';')
-        
-        # Merge Steige + Linien
-        df_full = df_s.merge(df_l, left_on='FK_LINIEN_ID', right_on='LINIEN_ID', how='left')
-        
-        return df_h, df_full
-    except Exception as e:
-        st.error(f"⚠️ Netzwerkfehler Datenbank: {e}")
-        return pd.DataFrame(), pd.DataFrame()
+# INTERNE STATIONSLISTE (Erweitert um Bim/Bus Beispiele)
+# Dies verhindert den KeyError, da wir kein CSV laden.
+STATION_MARKERS = [
+    {"name": "Schwedenplatz", "lat": 48.2114, "lon": 16.3783, "rbl": [4205, 4212, 4208, 4210]},
+    {"name": "Karlsplatz (U)", "lat": 48.2000, "lon": 16.3690, "rbl": [4202, 4216, 4617, 4214]},
+    {"name": "Stephansplatz", "lat": 48.2082, "lon": 16.3738, "rbl": [4200, 4206]},
+    {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "rbl": [4920, 4921, 4600]},
+    {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "rbl": [4209, 4211]}, # Bim 1, D, 71
+    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "rbl": [4204, 4213]},
+    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "rbl": [4207, 4105]},
+    # BUS & BIM BEISPIELE
+    {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "rbl": [267, 266]}, 
+    {"name": "Oper/Karlsplatz (Bim)", "lat": 48.2020, "lon": 16.3690, "rbl": [32, 40]}, # D, 1, 2, 71
+    {"name": "Alser Straße (43/U6)", "lat": 48.2170, "lon": 16.3420, "rbl": [4219, 4220]} 
+]
 
-# Load Data once
-df_stations, df_steige = load_network_data()
+# --- 3. HELFER ---
 
-# --- 4. GEOMETRIE HELFER & SUCHE ---
+def smooth_path(points):
+    if len(points) < 2: return points
+    smoothed = []
+    for i in range(len(points) - 1):
+        p1 = points[i]
+        p2 = points[i+1]
+        steps = 5
+        for j in range(steps):
+            f = j / steps
+            smoothed.append([p1[0]*(1-f)+p2[0]*f, p1[1]*(1-f)+p2[1]*f])
+    smoothed.append(points[-1])
+    return smoothed
+
+SMOOTH_ROUTES = {k: smooth_path(v) for k,v in RAW_ROUTES.items()}
+
+def calculate_bearing(p1, p2):
+    lat1, lat2 = math.radians(p1[0]), math.radians(p2[0])
+    dLon = math.radians(p2[1] - p1[1])
+    x = math.sin(dLon) * math.cos(lat2)
+    y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
+    return (math.degrees(math.atan2(x, y)) + 360) % 360
 
 def haversine(lat1, lon1, lat2, lon2):
     R = 6371000
@@ -86,196 +138,170 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return R * c
 
-def get_nearby_rbls_and_lines(lat, lon, radius=500):
-    if df_stations.empty or df_steige.empty: return [], [], []
-    
-    # 1. Filtere Haltestellen (df_stations hat Spalten WGS84_LAT / WGS84_LON)
-    lat_min, lat_max = lat - 0.01, lat + 0.01
-    lon_min, lon_max = lon - 0.015, lon + 0.015
-    
-    # HIER WAR DER FEHLER: Wir nutzen jetzt die korrekten Spaltennamen der Haltestellen-CSV
-    nearby_h = df_stations[
-        (df_stations['WGS84_LAT'] > lat_min) & (df_stations['WGS84_LAT'] < lat_max) &
-        (df_stations['WGS84_LON'] > lon_min) & (df_stations['WGS84_LON'] < lon_max)
-    ].copy()
-    
-    if nearby_h.empty: return [], [], []
-
-    # Exakte Distanz
-    nearby_h['dist'] = nearby_h.apply(lambda row: haversine(lat, lon, row['WGS84_LAT'], row['WGS84_LON']), axis=1)
-    nearby_h = nearby_h[nearby_h['dist'] <= radius].sort_values('dist')
-    
-    if nearby_h.empty: return [], [], []
-
-    halt_ids = nearby_h['HALTESTELLEN_ID'].unique()
-    
-    # 2. Steige und Linien finden (df_steige)
-    relevant_steige = df_steige[df_steige['FK_HALTESTELLEN_ID'].isin(halt_ids)]
-    
-    rbl_list = relevant_steige['RBL_NUMMER'].dropna().unique().astype(int).tolist()
-    line_ids = relevant_steige['LINIEN_ID'].unique()
-    
-    # Für die Map verwenden wir die Koordinaten der Haltestellen (nicht der einzelnen Steige, das wäre zu voll)
-    # Mapping für Return
-    stations_output = []
-    for _, row in nearby_h.iterrows():
-        stations_output.append({
-            "HALTESTELLEN_NAME": row['HALTESTELLEN_NAME'],
-            "lat": row['WGS84_LAT'],
-            "lon": row['WGS84_LON'],
-            "dist": row['dist']
-        })
-    
-    return rbl_list, stations_output, line_ids
-
-def get_route_points_for_lines(line_ids):
-    """Holt ALLE Punkte (Stationen) für die gefundenen Linien aus der Steige-Tabelle"""
-    if df_steige.empty: return {}
-    
-    routes = {}
-    lines_data = df_steige[df_steige['LINIEN_ID'].isin(line_ids)]
-    
-    for lid in line_ids:
-        # Steige haben STEIG_WGS84_LAT
-        points = lines_data[lines_data['LINIEN_ID'] == lid][['STEIG_WGS84_LAT', 'STEIG_WGS84_LON']].dropna()
-        if not points.empty:
-            line_name = lines_data[lines_data['LINIEN_ID'] == lid]['BEZEICHNUNG'].iloc[0]
-            routes[lid] = {
-                "name": line_name,
-                "points": points.values.tolist()
-            }
-    return routes
-
-# --- 5. HAUPTPROGRAMM ---
+# --- 4. SIDEBAR: GPS ---
 
 with st.sidebar:
     st.header("Einstellungen")
-    gps_mode = st.toggle("Echtstandort verwenden", value=True)
+    gps_mode = st.toggle("Echtstandort (GPS)", value=False)
     
-    user_lat, user_lon = 48.2082, 16.3738
+    # Default: Simuliert
+    user_lat, user_lon = 48.2090, 16.3720 
     
-    if gps_mode and HAS_GPS_MODULE:
-        loc = get_geolocation()
-        if loc:
-            user_lat = loc['coords']['latitude']
-            user_lon = loc['coords']['longitude']
-            st.success(f"GPS: {user_lat:.4f}, {user_lon:.4f}")
+    if gps_mode:
+        st.write("📡 Suche GPS...")
+        if HAS_GPS_MODULE:
+            loc = get_geolocation()
+            if loc:
+                user_lat = loc['coords']['latitude']
+                user_lon = loc['coords']['longitude']
+                st.success(f"Pos: {user_lat:.4f}, {user_lon:.4f}")
+            else:
+                st.warning("Bitte Browser-Zugriff erlauben.")
         else:
-            st.warning("Suche GPS...")
-    elif not gps_mode:
-        st.write("🧪 Testversion (Simuliert)")
-        # Simuliere Kagraner Platz als Test für Busse
-        user_lat = st.slider("Lat", 48.10, 48.30, 48.2435) 
-        user_lon = st.slider("Lon", 16.20, 16.60, 16.4432)
-
-# 1. Datenanalyse
-rbls, station_info, active_line_ids = get_nearby_rbls_and_lines(user_lat, user_lon, radius=500)
-route_geometries = get_route_points_for_lines(active_line_ids)
-
-# Header
-if station_info:
-    closest = station_info[0]
-    st.info(f"📍 Standort erkannt. Nächste Haltestelle: **{closest['HALTESTELLEN_NAME']}** ({int(closest['dist'])}m). Frage **{len(rbls)}** Steige ab.")
-else:
-    if df_stations.empty:
-        st.warning("Datenbank lädt noch oder Fehler aufgetreten.")
+            st.error("Plugin 'streamlit-js-eval' fehlt.")
+            user_lat = st.slider("Lat", 48.15, 48.25, 48.2082)
+            user_lon = st.slider("Lon", 16.30, 16.45, 16.3738)
     else:
-        st.warning("Keine Haltestellen im Umkreis von 500m gefunden.")
+        st.write("🧪 Test-Modus (Fixe Pos.)")
 
-# 2. Echtzeitdaten
-def fetch_realtime_data(rbl_list):
-    if not rbl_list: return []
-    vehicles = []
-    chunk_size = 20 # Batches
+# --- 5. LOGIK ---
+
+closest_station = None
+min_dist = 999999
+stations_with_dist = []
+
+# Berechne Distanz zu allen bekannten Stationen
+for s in STATION_MARKERS:
+    dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
+    stations_with_dist.append({**s, "dist": dist})
+    if dist < min_dist:
+        min_dist = dist
+        closest_station = s
+
+stations_with_dist.sort(key=lambda x: x["dist"])
+
+# Info-Header
+if min_dist < 100:
+    st.success(f"📍 **Du befindest Dich in der Station {closest_station['name']}**")
+else:
+    st.info(f"🚶 Nächste Station: **{closest_station['name']}** ({int(min_dist)}m)")
     
-    for i in range(0, len(rbl_list), chunk_size):
-        chunk = rbl_list[i:i+chunk_size]
-        url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, chunk))}"
-        try:
-            resp = requests.get(url, timeout=4).json()
-            for mon in resp.get("data", {}).get("monitors", []):
-                slat = mon.get("locationStop", {}).get("geometry", {}).get("coordinates", [0,0])[1]
-                slon = mon.get("locationStop", {}).get("geometry", {}).get("coordinates", [0,0])[0]
-                
-                for line in mon.get("lines", []):
-                    line_name = line.get("name")
-                    line_type = line.get("type") 
-                    
-                    departures = line.get("departures", {}).get("departure", [])
-                    for dep in departures[:3]:
-                        countdown = dep.get("departureTime", {}).get("countdown", 99)
-                        if isinstance(countdown, int) and countdown > 30: continue
-                        
-                        v_info = dep.get("vehicle", {})
-                        has_ac = v_info.get("barrierFree", False) or v_info.get("foldingRamp", False)
-                        
-                        vehicles.append({
-                            "line": line_name,
-                            "type": line_type,
-                            "dest": line.get("towards"), 
-                            "time": countdown,
-                            "lat": slat, "lon": slon,
-                            "ac": has_ac
-                        })
-        except: pass
-    return vehicles
+    # Zeige die 3 nächsten Stationen an
+    near_str = " | ".join([f"{s['name']} ({int(s['dist'])}m)" for s in stations_with_dist[:3]])
+    st.caption(f"In der Nähe: {near_str}")
 
-vehicles = fetch_realtime_data(rbls)
+# --- 6. API ABFRAGE (Nur nahe RBLs oder Alle?) ---
+# Um API-Limits zu sparen und Performance zu halten, fragen wir hier
+# die 7 nächsten Stationen ab (oder alle, wenn die Liste kurz ist).
+rbls_to_fetch = []
+for s in stations_with_dist[:7]: # Top 7 nächste Stationen
+    rbls_to_fetch.extend(s["rbl"])
+
+@st.cache_data(ttl=10)
+def fetch_live_data(rbl_list):
+    if not rbl_list: return []
+    # RBL Liste in String umwandeln für URL
+    rbl_str = "&rbl=".join(map(str, rbl_list))
+    url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={rbl_str}"
+    
+    try:
+        response = requests.get(url, timeout=4)
+        data = response.json()
+        vehicles = []
+        
+        for mon in data.get("data", {}).get("monitors", []):
+            slat = mon.get("locationStop", {}).get("geometry", {}).get("coordinates", [0,0])[1]
+            slon = mon.get("locationStop", {}).get("geometry", {}).get("coordinates", [0,0])[0]
+            
+            for line in mon.get("lines", []):
+                line_name = line.get("name")
+                departures = line.get("departures", {}).get("departure", [])
+                
+                for i, dep in enumerate(departures):
+                    if i >= 4: break 
+                    countdown = dep.get("departureTime", {}).get("countdown", 99)
+                    if isinstance(countdown, int) and countdown > 20: continue # Radius Filter
+                    
+                    vehicle_info = dep.get("vehicle", {})
+                    # Klapprampe/Barrierefrei als Klima-Indikator
+                    has_ac = vehicle_info.get("barrierFree", False) or vehicle_info.get("foldingRamp", False)
+                    
+                    vehicles.append({
+                        "line": line_name,
+                        "dest": line.get("towards"), 
+                        "time": countdown,
+                        "lat": slat, "lon": slon,
+                        "ac": has_ac
+                    })
+        return vehicles
+    except: return []
+
+vehicles = fetch_live_data(rbls_to_fetch)
 vehicles.sort(key=lambda x: x["time"] if isinstance(x["time"], int) else 99)
 
-# --- 6. KARTE ---
+# --- 7. KARTE ---
 m = folium.Map(location=[user_lat, user_lon], zoom_start=15, tiles="CartoDB positron")
 
-folium.Marker([user_lat, user_lon], tooltip="Du", icon=folium.Icon(color="blue", icon="user", prefix="fa"), z_index_offset=1100).add_to(m)
+# A) User
+folium.Marker(
+    [user_lat, user_lon],
+    tooltip="Deine Position",
+    icon=folium.Icon(color="blue", icon="user", prefix="fa"),
+    z_index_offset=1100
+).add_to(m)
 
-# A) LINIE VERLÄUFE (Punkte)
-for lid, data in route_geometries.items():
-    l_name = data["name"]
-    color = "#888888"
-    if "U" in l_name: color = "#A365A4"
-    elif "S" in l_name: color = "#00549F"
-    elif "A" in l_name or "Bus" in l_name: color = "#E3001B"
-    else: color = "#FF5C5C"
-    
-    for p in data["points"]:
-        folium.CircleMarker(location=p, radius=2, color=color, fill=True, fill_opacity=0.4, popup=f"Linie {l_name}", weight=0).add_to(m)
+# B) Linien (Hintergrund)
+for line, path in SMOOTH_ROUTES.items():
+    color = LINE_COLORS.get(line, "#888")
+    if "S" in line: color = LINE_COLORS["S"]
+    folium.PolyLine(path, color=color, weight=4, opacity=0.4).add_to(m)
 
-# B) STATIONEN
-for s in station_info:
-    icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
-    folium.Marker(
-        [s['lat'], s['lon']],
-        popup=s['HALTESTELLEN_NAME'],
-        icon=icon,
-        z_index_offset=1000
-    ).add_to(m)
-
-# C) FAHRZEUGE
+# C) Fahrzeuge
 for v in vehicles:
-    v_color = "#333"
-    if "ptBus" in v["type"]: v_color = TYPE_COLORS["ptBusCity"]
-    elif "ptTram" in v["type"]: v_color = TYPE_COLORS["ptTram"]
-    elif "ptMetro" in v["type"]: v_color = TYPE_COLORS["ptMetro"]
-    elif "ptTrain" in v["type"]: v_color = TYPE_COLORS["ptTrainS"]
+    pos = [v["lat"], v["lon"]]
+    rot = 0
     
-    if "U1" in v["line"]: v_color = "#E2021A"
-    if "U2" in v["line"]: v_color = "#A365A4"
-    if "U3" in v["line"]: v_color = "#F67F21"
-    if "U4" in v["line"]: v_color = "#009641"
-    if "U6" in v["line"]: v_color = "#9D6643"
+    # Routing-Logik (Optional, verbessert Optik)
+    route_key = v["line"]
+    if "S" in route_key and "45" not in route_key and "50" not in route_key: route_key = "S"
     
+    if route_key in SMOOTH_ROUTES and isinstance(v["time"], int):
+        path = SMOOTH_ROUTES[route_key]
+        idx = min(v["time"] * 3, len(path)-2) 
+        idx = max(0, int(idx))
+        pos = path[idx]
+        rot = calculate_bearing(path[idx], path[idx+1])
+    
+    # Farbe
+    l_color = LINE_COLORS.get(v["line"], "#555")
+    if "S" in v["line"]: l_color = LINE_COLORS["S"]
+    if "A" in v["line"]: l_color = LINE_COLORS["13A"]
+
     bg_class = "ac-yes-bg" if v["ac"] else "ac-no-bg"
     
     icon_html = f"""
-    <div class="veh-box {bg_class}" style="background-color: {v_color};">
-        {v['line']}
+    <div style="transform: rotate({rot-90}deg);">
+        <div class="veh-box {bg_class}" style="background-color: {l_color};">
+            {v['line']}
+        </div>
     </div>
     """
     
     folium.Marker(
-        [v["lat"], v["lon"]], 
+        pos, 
         popup=f"{v['line']} -> {v['dest']} ({v['time']}m)",
         icon=folium.DivIcon(html=icon_html, icon_size=(44,24), icon_anchor=(22,12))
+    ).add_to(m)
+
+# D) Stationen (OBEN AUF)
+# Wir zeichnen nur die relevanten Stationen in der Nähe ein, um die Karte nicht zu fluten
+for s in stations_with_dist[:10]: 
+    icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(20, 12), icon_anchor=(10, 6))
+    folium.Marker(
+        [s["lat"], s["lon"]], 
+        popup=s['name'], 
+        icon=icon,
+        z_index_offset=1000 # Immer im Vordergrund
     ).add_to(m)
 
 st_folium(m, width="100%", height=600, returned_objects=[])
