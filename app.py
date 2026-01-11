@@ -4,52 +4,88 @@ from streamlit_folium import st_folium
 import requests
 import math
 
-# --- 1. SETUP & CSS (Performance-Optimiert) ---
-st.set_page_config(page_title="Wien Öffis Light", layout="wide", page_icon="🚋")
+# --- 1. SETUP & CSS ---
+st.set_page_config(page_title="Wien Öffis V13", layout="wide", page_icon="🚋")
 
 st.markdown("""
     <style>
     .block-container { padding-top: 0rem; }
     
-    /* Simples Viereck für Fahrzeuge */
+    /* FAHRZEUG BOX */
     .veh-box {
-        width: 32px;
+        width: 40px;
         height: 22px;
-        border-radius: 4px;
-        border: 2px solid white;
-        box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+        border: 1px solid white;
+        box-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         display: flex;
-        justify-content: center;
         align-items: center;
+        justify-content: center; /* Text zentriert, Strich ist absolut */
         font-family: sans-serif;
         font-weight: bold;
         font-size: 11px;
         color: white;
-        z-index: 1000;
+        position: relative; /* Wichtig für den Strich */
+        overflow: hidden;
+        border-radius: 2px;
     }
 
-    /* Haltestellen Punkt (klein und performant) */
-    .station-dot {
-        width: 14px; height: 14px;
-        background-color: white;
-        border: 3px solid #333;
-        border-radius: 50%;
+    /* DER STRICH (Indikator) - Absolut rechts positioniert */
+    .indicator-stripe {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0; /* Immer rechts (Vorne) */
+        width: 8px;
+        border-left: 1px solid rgba(0,0,0,0.3);
+        z-index: 2;
+    }
+
+    /* TEXT (Liniennummer) */
+    .veh-text {
+        z-index: 1;
+        padding-right: 6px; /* Damit der Text nicht unterm Strich liegt */
+    }
+
+    /* KLIMATISIERT: BLAU-WEISS */
+    .ac-yes {
+        background: repeating-linear-gradient(
+            -45deg,
+            #0066b3,
+            #0066b3 4px,
+            #ffffff 4px,
+            #ffffff 8px
+        );
+    }
+
+    /* NICHT KLIMATISIERT: ROT-WEISS */
+    .ac-no {
+        background: repeating-linear-gradient(
+            -45deg,
+            #d32f2f,
+            #d32f2f 4px,
+            #ffffff 4px,
+            #ffffff 8px
+        );
     }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🇦🇹 Wiener Linien (Performance Mode)")
+# --- 2. LOGO & DATEN ---
 
-# --- 2. DATEN: ROUTEN & FARBEN ---
+# Dein Base64 Logo für Stationen
+ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAASCAIAAADDkPmOAAAAB3RJTUUH6gELBx0FGyOy4wAABC5JREFUeJx9VG1olWUYvu7nft6zs842j2eamlrLyPxi1I+prbQQRZEs+mMSlKmRSPaxSowUER1G0AcqSFqWLaOkREylKNO1GCgUpInkV5qVMtvmPDtne897nue++3GOZ5tgF+/P57me+74+XlJVlKAKIlWF92StO30227DSHTkKtlAlQI2BCAFg1jDUKCp/5cXyhuWUHAQiEKEfzI283kNB1ub27EvPmpc/eJg4IChEUBbj+2rhHJgl3U2pVOUXTYnGNVSdAjMZQwPRj5pInQMzxGffWNv95CJNp01qMFQAUu9RWRmbOUNVNZezU+uqDuyOPTpXMhn09iIMtfTlnXR1SXfG3iCC/+N8ZtnL+R+aTXUKAJwDEUDkvEkNttPqyVqIaOfVzKKlmu0ha0tbgwiGpb2Daycm3nnTFkUgImtze/dnX1ohbVfMrUPhXOFVADCkLm9GjbS1kyiZ1I4OufAnvMAY4LpVzHBOutNlC+Yn3nvLDB9m1XtiVpHsmvW9726meNxUp+A8TD+trIUqjxtrysvNmBrf1kZVVVApjQs2ms4gFqvYsql82bMKQMSCOX/st+zzDfnWZpNIIQy1pwcDoaoaRXZaPVSDB+6Pvt/PCojvMynMce2kivc3BlPqihoYY/MtrbmPm2Bt2ePz4R0UoiqipSApQNYGM6bHHp6uqvHlS10m438/AxUq8OYivuvOROMaU51yuQiWoTCiJL29FI+XBvQA46ZQVRoY3v8BqaqqkqoCzvsgCC5cal+3dd/VbEhsAFVFwvJDdfcseexBAD290abPDx4/dynnhajgIqkKGVPwnNl0dabvnVBjVZUADxAQBMHXLcefW9/U9tcVBBaloio+2/3T6BFDZk8Zv/HL5tXrPkUyAdEb5zQGIkhnp8+ZvHhevSUi74XZKLBqy94NH+wHm2Bosv8PgNnk29PfHT05Z+qEb4+c5FQlV97iB1ArW456cpbQuGLByoWzAVjnxbI5+/e/S9Z90tJ8DMkKEPJh1HdL1FkG04lzl6O8O33ximf27no8VEHEbKL29O01w7avfWZm3TjvhQiWCId+PrVsw87zlzuqx4xwXvqaoupFKxPxnjC6FuYutnUeO/NPe1c3LBfPqJIxquI704/Mrtu2+ukR1VV55y0bIrJszLia4c1bX43HY95L34aqXnRQRXnLr2eWNu68ZkxHOnvol1MSOQS2cIIt+54cEda/9sSqxXNRCIItRsyq4rYhg24WoA/3tja8vSuTDVEWpDPhgdYTKMaCQOSvZkbfMWz72oWzJo/3IgSyzKWAFsOnCpQ6ogrV9mvZ1zfv2bHrMCriZK2KAMRM3guICCDn59RP3Lb6qZFDkyUR+tHAAiDq60HhGWNM40ff7Pjqx9FjR+WdqAio5BmISMJo4t0jD2x8AUAY5eOxoFiTfhv/B/5aRhM1eYuUAAAAAElFTkSuQmCC"
+
+# Simulierte User Position (z.B. Nähe Stephansplatz, aber nicht genau drin)
+# Ändere diese Koordinaten, um "in der Station" zu testen (z.B. auf 48.2082, 16.3738 setzen)
+USER_LAT = 48.2090
+USER_LON = 16.3720
 
 LINE_COLORS = {
-    "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", 
-    "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643", 
+    "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", "U4": "#009641", "U5": "#F67F21", "U6": "#9D6643", 
     "1": "#FF5C5C", "2": "#FF5C5C", "D": "#FF5C5C", "71": "#FF5C5C",
-    "S": "#00549F", "WLB": "#00549F"
+    "S": "#00549F", "13A": "#E3001B", "40A": "#E3001B", "59A": "#E3001B"
 }
 
-# Grobe Routenverläufe (Damit die Fahrzeuge nicht in der Luft schweben)
 RAW_ROUTES = {
     "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2450, 16.4400], [48.2600, 16.4500]], 
     "U2": [[48.2200, 16.5100], [48.2150, 16.4500], [48.2180, 16.4200], [48.2180, 16.3900], [48.2150, 16.3610], [48.2100, 16.3570], [48.2070, 16.3580], [48.2000, 16.3690]], 
@@ -57,31 +93,31 @@ RAW_ROUTES = {
     "U4": [[48.2050, 16.2500], [48.1900, 16.2900], [48.1850, 16.3200], [48.1900, 16.3500], [48.2000, 16.3690], [48.2082, 16.3738], [48.2114, 16.3783], [48.2166, 16.3730], [48.2250, 16.3600], [48.2400, 16.3600]], 
     "U6": [[48.1350, 16.3200], [48.1500, 16.3300], [48.1750, 16.3350], [48.1960, 16.3350], [48.2150, 16.3400], [48.2300, 16.3500], [48.2400, 16.3800], [48.2600, 16.4000]], 
     "1": [[48.2114, 16.3783], [48.2166, 16.3730], [48.2150, 16.3650], [48.2110, 16.3600], [48.2050, 16.3600], [48.2020, 16.3680], [48.2030, 16.3750], [48.2050, 16.3850], [48.2100, 16.3950]],
-    "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800]],
-    "2": [[48.2114, 16.3783], [48.2110, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400]],
-    "71": [[48.2160, 16.3690], [48.2050, 16.3600], [48.2020, 16.3680], [48.1950, 16.3900], [48.1800, 16.4100], [48.1600, 16.4400]]
+    "2": [[48.2250, 16.3800], [48.2114, 16.3783], [48.2080, 16.3700], [48.2050, 16.3600], [48.2080, 16.3500], [48.2100, 16.3400], [48.2200, 16.3300]],
+    "D": [[48.2600, 16.3650], [48.2350, 16.3600], [48.2166, 16.3730], [48.2150, 16.3650], [48.2050, 16.3600], [48.1900, 16.3800], [48.1830, 16.3800]],
+    "71": [[48.2160, 16.3690], [48.2050, 16.3600], [48.2020, 16.3680], [48.1950, 16.3900], [48.1800, 16.4100], [48.1600, 16.4400]],
+    "S": [[48.2600, 16.4000], [48.2400, 16.3800], [48.2180, 16.3900], [48.2060, 16.3850], [48.1850, 16.3800], [48.1700, 16.3700], [48.1500, 16.3200]] 
 }
 
 STATION_MARKERS = [
-    {"name": "Schwedenplatz", "lat": 48.2114, "lon": 16.3783, "lines": "U1, U4, 1, 2", "rbl": [4205, 4212, 4208, 4210]},
-    {"name": "Karlsplatz", "lat": 48.2000, "lon": 16.3690, "lines": "U1, U2, U4, WLB", "rbl": [4202, 4216, 4617, 4214]},
-    {"name": "Stephansplatz", "lat": 48.2082, "lon": 16.3738, "lines": "U1, U3", "rbl": [4200, 4206]},
-    {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "lines": "U3, U6, 5, 6, 18", "rbl": [4920, 4921, 4600]},
-    {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "lines": "U2, D, 1, 71", "rbl": [4209, 4211]},
-    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "lines": "U3, U4, O", "rbl": [4204, 4213]},
-    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "lines": "U1, U2, 5, O", "rbl": [4207, 4105]}
+    {"name": "Schwedenplatz", "lat": 48.2114, "lon": 16.3783, "rbl": [4205, 4212, 4208, 4210]},
+    {"name": "Karlsplatz", "lat": 48.2000, "lon": 16.3690, "rbl": [4202, 4216, 4617, 4214]},
+    {"name": "Stephansplatz", "lat": 48.2082, "lon": 16.3738, "rbl": [4200, 4206]},
+    {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "rbl": [4920, 4921, 4600]},
+    {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "rbl": [4209, 4211]},
+    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "rbl": [4204, 4213]},
+    {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "rbl": [4207, 4105]}
 ]
 
-# --- 3. HELFER ---
+# --- 3. HELPER & DISTANZ ---
 
 def smooth_path(points):
-    """Macht die Linien etwas runder"""
     if len(points) < 2: return points
     smoothed = []
     for i in range(len(points) - 1):
         p1 = points[i]
         p2 = points[i+1]
-        steps = 5 
+        steps = 5
         for j in range(steps):
             f = j / steps
             smoothed.append([p1[0]*(1-f)+p2[0]*f, p1[1]*(1-f)+p2[1]*f])
@@ -97,7 +133,43 @@ def calculate_bearing(p1, p2):
     y = math.cos(lat1) * math.sin(lat2) - (math.sin(lat1) * math.cos(lat2) * math.cos(dLon))
     return (math.degrees(math.atan2(x, y)) + 360) % 360
 
-@st.cache_data(ttl=15)
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000 # Radius Erde in Metern
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c # Distanz in Metern
+
+# --- 4. POSITION CHECK ---
+# Wir prüfen, wo der User ist
+closest_station = None
+min_dist = 999999
+stations_with_dist = []
+
+for s in STATION_MARKERS:
+    dist = haversine(USER_LAT, USER_LON, s["lat"], s["lon"])
+    stations_with_dist.append({**s, "dist": dist})
+    if dist < min_dist:
+        min_dist = dist
+        closest_station = s
+
+# Sortieren nach Nähe
+stations_with_dist.sort(key=lambda x: x["dist"])
+
+# --- HEADER LOGIK (Im/Vor der Station) ---
+if min_dist < 100:
+    st.success(f"📍 **Du befindest Dich in der Station {closest_station['name']}**")
+else:
+    st.info(f"🚶 Du bist unterwegs. Nächste Station: **{closest_station['name']}** ({int(min_dist)}m)")
+    # Kleine Liste der nächsten Stationen
+    near_str = " | ".join([f"{s['name']} ({int(s['dist'])}m)" for s in stations_with_dist[:3]])
+    st.caption(f"Nahegelegene Stationen: {near_str}")
+
+
+# --- 5. API DATEN ---
+@st.cache_data(ttl=10)
 def fetch_all_data():
     all_rbls = []
     for s in STATION_MARKERS: all_rbls.extend(s["rbl"])
@@ -114,82 +186,91 @@ def fetch_all_data():
             slon = mon.get("locationStop", {}).get("geometry", {}).get("coordinates", [0,0])[0]
             
             for line in mon.get("lines", []):
-                # HIER: LIMIT AUF 4 FAHRZEUGE pro Linie/Richtung
+                line_name = line.get("name")
                 departures = line.get("departures", {}).get("departure", [])
                 
                 for i, dep in enumerate(departures):
-                    if i >= 4: break # Limit 4!
-                    
+                    if i >= 4: break 
                     countdown = dep.get("departureTime", {}).get("countdown", 99)
-                    if isinstance(countdown, int) and countdown > 30: continue
+                    if isinstance(countdown, int) and countdown > 12: continue
+                    
+                    vehicle_info = dep.get("vehicle", {})
+                    has_ac = vehicle_info.get("foldingRamp", False) or vehicle_info.get("barrierFree", False)
                     
                     vehicles.append({
-                        "line": line.get("name"), 
+                        "line": line_name,
                         "dest": line.get("towards"), 
                         "time": countdown,
-                        "lat": slat, "lon": slon
+                        "lat": slat, "lon": slon,
+                        "ac": has_ac
                     })
         return vehicles
     except: return []
 
 vehicles = fetch_all_data()
-# Sortieren
 vehicles.sort(key=lambda x: x["time"] if isinstance(x["time"], int) else 99)
 
-# --- 4. KARTE ZEICHNEN ---
+# --- 6. KARTE ---
+m = folium.Map(location=[USER_LAT, USER_LON], zoom_start=14, tiles="CartoDB positron")
 
-m = folium.Map(location=[48.2080, 16.3700], zoom_start=13, tiles="CartoDB positron")
+# User Position Marker
+folium.Marker(
+    [USER_LAT, USER_LON],
+    tooltip="Deine Position",
+    icon=folium.Icon(color="blue", icon="user", prefix="fa")
+).add_to(m)
 
-# A) LINIEN (Hintergrund)
+# Linien
 for line, path in SMOOTH_ROUTES.items():
     color = LINE_COLORS.get(line, "#888")
-    folium.PolyLine(path, color=color, weight=3, opacity=0.4).add_to(m)
+    if "S" in line: color = LINE_COLORS["S"]
+    folium.PolyLine(path, color=color, weight=4, opacity=0.4).add_to(m)
 
-# B) STATIONEN (Einfache Punkte)
+# Stationen (Dein Logo)
 for s in STATION_MARKERS:
-    html_dot = f"""<div class="station-dot"></div>"""
-    folium.Marker(
-        [s["lat"], s["lon"]], 
-        popup=s['name'],
-        icon=folium.DivIcon(html=html_dot, icon_size=(14,14), icon_anchor=(7,7))
-    ).add_to(m)
+    # Custom Icon via Base64
+    icon = folium.CustomIcon(
+        ICON_STATION_B64,
+        icon_size=(30, 18), # Größe angepasst an das Logo-Format (ca 30x18px)
+        icon_anchor=(15, 9)
+    )
+    folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon).add_to(m)
 
-# C) FAHRZEUGE (Vierecke mit Text)
+# Fahrzeuge
 for v in vehicles:
     pos = [v["lat"], v["lon"]]
+    rot = 0
     
-    # Position auf Route berechnen
-    if v["line"] in SMOOTH_ROUTES and isinstance(v["time"], int) and v["time"] < 25:
-        path = SMOOTH_ROUTES[v["line"]]
+    route_key = v["line"]
+    if "S" in route_key: route_key = "S"
+    
+    if route_key in SMOOTH_ROUTES and isinstance(v["time"], int):
+        path = SMOOTH_ROUTES[route_key]
         idx = min(v["time"] * 3, len(path)-2) 
         idx = max(0, int(idx))
         pos = path[idx]
-        # Rotation lassen wir weg für bessere Lesbarkeit des Textes
+        rot = calculate_bearing(path[idx], path[idx+1])
     
-    line_color = LINE_COLORS.get(v["line"], "#555")
+    l_color = LINE_COLORS.get(v["line"], "#333")
+    if "S" in v["line"]: l_color = LINE_COLORS["S"]
+    if "A" in v["line"]: l_color = LINE_COLORS["13A"]
+
+    stripe_class = "ac-yes" if v["ac"] else "ac-no"
     
-    # HTML: Einfaches Viereck, Farbe der Linie
+    # Rotation -90 weil HTML Box horizontal ist, 0 Grad aber Norden
     icon_html = f"""
-    <div class="veh-box" style="background-color: {line_color};">
-        {v['line']}
+    <div style="transform: rotate({rot-90}deg);">
+        <div class="veh-box" style="background-color: {l_color};">
+            <span class="veh-text">{v['line']}</span>
+            <div class="indicator-stripe {stripe_class}"></div>
+        </div>
     </div>
     """
     
     folium.Marker(
         pos, 
-        popup=f"<b>{v['line']}</b> ➤ {v['dest']}<br>{v['time']} min",
-        icon=folium.DivIcon(html=icon_html, icon_size=(32,22), icon_anchor=(16,11))
+        popup=f"{v['line']} -> {v['dest']} ({v['time']}m)",
+        icon=folium.DivIcon(html=icon_html, icon_size=(40,24), icon_anchor=(20,12))
     ).add_to(m)
 
-st_folium(m, width="100%", height=550, returned_objects=[])
-
-# --- 5. INFO LISTE (Kompakt) ---
-st.subheader("Nächste Abfahrten (Max 4 pro Linie)")
-cols = st.columns(3)
-
-# Wir zeigen nur die ersten 12 Fahrzeuge insgesamt an, um die Liste kurz zu halten
-# oder du nimmst 'vehicles' komplett, da wir oben schon gefiltert haben.
-for i, v in enumerate(vehicles):
-    with cols[i % 3]:
-        clr = LINE_COLORS.get(v["line"], "#555")
-        st.markdown(f"**<span style='color:{clr}'>{v['line']}</span>** ➜ {v['dest']} ({v['time']} min)", unsafe_allow_html=True)
+st_folium(m, width="100%", height=600, returned_objects=[])
