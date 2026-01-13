@@ -6,7 +6,7 @@ import math
 import pandas as pd
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V29", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V30", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
@@ -40,7 +40,7 @@ ICON_SILBERPFEIL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCA
 # V-Wagen
 ICON_VWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkiICcMPk4AAAPNSURBVDjLbVRLb1tVEP6+c65v7Dzs2Emchx1QeKqpCn0SR7BpNt2g0v4ONgh2XSAkFqyAJfADoGxAtLQShR8AqCA1rUglRNMmrfNwkia+cXLte+6ZYWFTisQsznxnHjpnRvMN65sNBUAAUFUABuwCoHv+4wbIJ67etZv1tJ3/KuL/pBsfdGEU7RPKJ+HaU/rfh59GBBXa+x0BkKIkSTajvdXVFQCgUQUBBcpjYyOjo/n8EI0FwPpm49dffu60D7Nh1lpL0quoqIgQCmi3lF5xIEgRCawFNU1TKFTUGIoIDAEYY62xBHttUACaJM4Y7u+3Oqk7f+GiqgYkf/rxxuvzcx0FyCiKWvv7JDudTj6fL5fLziUgrbXWBqqq3i8tLZFMEmesmT1yJMhkSMaHcbavT1UFUm/U48M4m8167/v7+4eGBm8tLkJ1rjb33ZeX3zz/ljEmAASKTz7+dGSyehjHB7s782/UxsuTv9+8WZ2u/Hbrj3yhBKOb9bXxiYoXeby9XjtxIrXsU2por350pTRZNdbuNDaKpTGn6LSi8kihWCq9cuzVO7cXtx/vbG9upJ5D+fxYebTZ3I2au8PFEQPQi287l/pUCKUByFSsMSqqquK9T1yaOpcmnSSGS4WgaiKp8eJd0onjpNNOnRMRwpOgwABxfCjeUzUITCbMANo6aL384kt//blMWq5tNj784P3jwoEAmSDYVTXOJ2Fo9qIkl5nIZAVKBQ2NNTDGMlhu7gwo48Q5kalSKSOS6bPZIOuhXtMkTVeb0aBH0h8WhFHiioO5dttFLimXig2VDdr3Ll0KVFWAoWNHBvuyAU3S2h/J59cbjenjx+/V64PjE72hpAIQKIH8dmFytNyM9pPU5wuF0BglCEKEIgbav7H+wszM+lbjmUrl3spKXy5nvde4PTxcLEKz9bUMNABZrVST/oEol4Oi5dzyo0cHBwcPk04Y9o2UClAVQHrEUvF+5f6Dhlt3ztGYwvMzbfGp+C7BSBgair+9tdVqHTTqa2H/QFAorNXrNKY0Xk5Tt7m6uhe1WN/c9kn79p1F7/3dpbvXrn5PQ2OM957kXK12+szpLz77HF06iYhIEFhjLEkVLU+Mn6m99vVXlwkGmeDChYuZMHPlm2+99y5xLnXGmunp6bm5WtxuDwwNbm1tPbz/4O133wkADcLw5KnTIJ6dee5Rvb6wcLZULIro9evXzp07d/To0ampKRElewuEht6LqAIIw7BSqSycXbDWqmoum4vjePne8qmTpyrVKogbN36Yn5+fnZ1NvVdRAMPDw7Dmb2pFJgVZhojuAAAAAElFTkSuQmCC"
 
-# X-Wagen (Neu)
+# X-Wagen
 ICON_XWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkvFcQRhCAAAAPfSURBVDjLZVRNb1tVEJ259/q9549nx37NF2nTxG6IaCI+mrAgVdogITYsWEOFEql0TXdE+QvAL2ADCxZs2IBEVbpAoqoERSVxahJo0tLWjnHqOE7wi5/fu3eGhZ0UibO6c2fumTnS3IOV2i4AIHSBAAx4HHXBAMh8csndYu5luq+OT/yc6n9g5v9EioB3yk92yjvIXRLu0XNvHgZgYAbAXm+BvebcK0QU3AsYe3MgAgKeNBMo9ht1Zdvzly4rpQBAsdHffndjx3aJFAgUAKInnDWx6Q6DiPxclUS0pFIIxKzJaGImQgBggWAJZCG0EIgojDGhoSgKwYCvzeOff7SVM3fpIgCoMOisrv52+Z13A8OgEKNoZ+O+MUYp6cRTp0bHAUAgCiG6GpBor/y4tVcHFVNKDp/N2246NIa1aTQPt55Us2l74ky2vFkiokw6oxynb3Dw19s/CaW86Vdv3Px+bv4iICgCs725sVetWK7nxJ16tTwzc0EiNht7Mbt559YPaa/fiqlntb/7h0Yi4la9+sr5l+r7jfGxsX8O97/54vOMNxSLp4J2q+0fWLazG4b3DvdnZmekkM1O24knbt+6abSOjHZf8+6slRqNupfzFCBKJSwbdeD7JjBRhzpBzHKIyELhSAmhCbXRQbt92CQGxQalEADAxGRYh63WQSwKyUSOZcfjKbY16o4SkplBCAGQsCyfNGroqJiVn6xUyqcGhnD7r+3lq9fen31dhxEZaoZRO+oc6ehMtv+g4w+nXQqNYcPEiMAMUoinR36/sitBO23ZiNyHEpXA7tpKBUChoVakI62HMtnKYWPASe7rkEDEZ+c2OHbBlW+/Na+YUORy0cvTAlECWC0/oaTj+7mR041HD83wMCLGEBEkAzMzkcan5eTI6WS1mhvo18Yk0q4h6uaYARBkO3C18Y/8zOjZ2oMHlMlYYZs1DnYau9vlYHqKNCvLtguTk79vbaFAIWUYhn9u/sFEUoh0tu8g7BAREQEdfw3kWrV6r3SfiVFg/lxBqpghAgYppVSSiMIgKK2va62llIlEauLFiTDoZDJu9oUhSu99/dWXC/NvKKliVz+81m77UohisbiysiIAUynXGIOIH5ybfHNh4ePl5UajAcy2Y0uplpaW8oX8Z598+qxeL5U2bNtOp93zU1N3f7m7uLjoplIfXb/uplLJZJKZW62Wm0rZcbtWq1Zqu48fPnrvyhURs7G823MuBGai9WIxXyg48XgURWura/lCwfM8AJAIiMjMRNR1ksgYPAGAkDKKNAAYbdbXi+PjY9lsVgixXiyOjo7lPI+IumbS3ZV/AegtHdiMMk7cAAAAAElFTkSuQmCC"
 
 # Type T (U6)
@@ -55,11 +55,23 @@ ICON_FLEXITY_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAA
 # Bim Alt
 ICON_BIM_OLD_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkIBQNjJiEAAAQXSURBVDjLVZTLb5RlFMaf816++b7p2JkOl4ItbXGQBBHFakKkqDTYhQmuXaoLFy4kRqMx/gcujAvDRiEuTEw0LgyEGAgOCAkIBI1KQ0vpBRhocS7ftJ3Ld3nf97goGDzJyTk5z5Pn7H5ULpcBMDMAAEQEgMEAYa0BZiYiZiYCkcDDI/5fa7b/9na7VavVPU8PDAwy86MqALVmcs6taQCSJFlcui+lBIOZeW0AAAshrDGlUomZhRBEVKlUAPT39xPRo7mVSuXs2bPZbHZiYiJJkkajYa31fb9QKEgpmZnK5XIzDFUmQyS0p7XSxKw9T0qZpEmaGGvTOE6FELlcj1La2pSEPH3qZBiGBw8eDIIsCFLKdquVGAPHGT8jSGgtPS/T7nasMZ7nra6sZjzPAWmSWpPmC3kF8PzCgmMCu7GxseMnTpwq/zo8+Pi+vXu/+/4H7emPP3h/dnaOmUdHRz/7/Itao/nJh4eUUrdu3SoWi4c++hQk33vnzTBsSKlWWq2MsHN/HOvJ57a/8Mbhr7+xxnx1+Msrl6/29j7W6nTgmAijzz2jGKjVG6kxnW53//j+KEqkn6s2ms2VFVZB4iwYi/cWjTVP79x5txqS8uIoZsDTmogcAKDT6dyYmd06MtxptRPP++12EMetwkgDKvB8dLvVWqMulJyfn8/39gIgEkIwJicn8z0559g5l/G9bqfVV+jN5XqMM0oSCURJYo0RQF/gmbgd+FqQkEoqrdIkiuOu0sqyc+wADjI6TtOeILuurxjFnajVUTLnHCRICQr84PqNGRKSzpTPVI8f09b9ODc3/sTW3Z7vTCqUVrms63RtnPwt6Uq1Zp0bXV8cVZ5LIj+fPzI1XRX07sjWnsTAukV2P9WqQ8PDtdnZt57cJtLUkZBexqysEhuzYf2RyclNmwcri3df37NnJlzec2BcgdG9dk3+ObVPw01Nx1LJao2ZHMCAFIJ871lBKyaNhLTdWDLHUkTbSzQ4EB79NuOcBBIh9vqZxrnzJeuicxdUYpk4BRMAJVvjL+0+fzEk2sUcXZ/u3/ciwKreqB+dvvm8whhhvtv9yzrWWjAxEYgJvMS8w3KBcRs8qUVKkoiq1lISXdO0BKWBOvMucJuJHV/WKkskwAyygCNuXby0hQBBBeOu3L8/8/PJtw+8SuXyL0t3KuHs7O2Zm/ko4guXpDFw1kpyUmx45eW61m0iAFnnNgOr/1SXp26clqIRZF9rNjdu2lh8akckxB3AAIp5hNG8+jvqIaxxBBtkRGlbdXBAMxTRUGlbbnhoS6lE5XL5AZUAxzy/sFAoFDxPx3GyvLw8MjIsSDyEGQNIjZmbmx8c2sLsmmGY8YP1xeIDdDxgDTcaYbvV6ltXJKLFe/eGhob8bAAHEIm1T8C/kTBUcj/lvpIAAAAASUVORK5CYII="
 
-# Bus
-ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAHCAIAAACQi2qmAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAAd0SU1FB+oBDQg4Nfs+SkkAAAIMSURBVCjPJc85T1RRGAbg9/vOOffcubM7IgqDCdg4A7GwMBYkdGLsbfwFJvrfwFho4UJBYVxiAHc0hmUGhsWZ4S5zmbt8FvRP81CndyQiAAACkKVJODzLCQKx2ilWqwAAgRBILgwEEPH9YZakBAihVK4oowkCQIQulBaRo2739coKQxRzv3vYWXubCTKI1Gu3H9xnVqZavTw9I4TdjU1AiIgEm6urCEc5icMys7RUnWqmIiAC8d17y7M35jSAUb//5sXLY8lyQZKMueASmBhW6y/Pnhvr1ireteaUa+362rpXqqTJWClF1smMo4y+UnD62z/lz++uH2XMNhr1wuDxk6f64tc0TqhMqoxJxqVyWSk9igOlrbB/qd7QNPa8omtdrzJRn5gYRYHWjtJmHIXGODHTP39oC0Xj6ZJXKli/Nd92rNUAtHXnDvaocfVHrXEzy1rbv2IlB7XG16pp57K8vbXfanWslSx91D89POnVHOfV9VnFeHjcrcWJIQyYB6rXaUx+Po+niequx8waABwji4vnG9/OozBI4nfNxlhx8SSIjRPH0YB4kKY5mBnfs/Tszq2dT1vhsA+l/DhxNBSwPlmLymV3/zQpcSc4IwIRUad3BBGAcslzESba2fk7iuJWe0FyIRKC5CAwCJQmyccP79ut+XKlBFJCooTSPOvs7gVRMN9eyAECiATE/wFeLf0Ld9L4ZwAAAABJRU5ErkJggg=="
+# Bus Normal
+ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAARCAIAAAAg6XlfAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoiFXP5RDQAAASmSURBVEjHxVVNi51ZEX6eOnXevh9Nf998GTuJSXo0UTCOoiAIuhCHQZwwG52VMKv5JZKFS7fCgDO4nBGEGceOMAZBjZmIi2QSEs2N3E5id9J9++P2fd9TVS6uaYcJDoILa3E4p+o5VaeKOk/x8uXL+H+I/u8uSD6rjIiI+E/WfweegA5wB8dPkK2tLVWNCJJPVxIBAMLt4fahwz0hAU4AHwuhEbG3tzcYDFqtFkl3/y/zc/eqqiZ4EQGCFMAREKq7PXzwEGCET0KKiLuPRqOVlZWIUACDweD8+fMXL148SPejD5wEe7ZiEwxJEel09eSpI8PhcHGxLUCg8dA7dza2NhuETzxExKVLl65cubK0tLSwsKATrYe3Ol0mCWtEW6RYvQ+SkgCIJDLq0cjcgQgPJ1NYbnUkZSCY/PHmno318RMAHibFi5sKG6YsRDCRcPfG7MaNG3Nzc0+bK3j05JmgbK4/mFnsJa22Nx5OadapNhEBwprB3++f/Oz58DLer7szM08e3O/OL0luRSDCm/F+3Qyl3SMigBRol43ZXtWZW9x5sjEzv+DNOGs+sbycc+73+3LQSjHZBOlCpzDrVAepMqSxobEoZm7m7mZmEUEJpKAAICCkwx3uZBGGimRBkiA9zNxKQFJ69513VLXX6/2r1IhYu3OLIlRJ6XCENaVpi1BVVSVAS5IknnYpgu7BIALBhKAjpZQ0ZS+mWZOkBHpBMQ8PBIVQVQfPnTtXVZVOGtQ210l3IBVbH9wDWI9Hze6QmigUJkKSVknViwmCYYywUquSIEFNNEm0en3wt1an/YWV5ev9YXt2JqNBkDDlmBBJmnMmqQCkaepfvvujH75qSnN2p6dJuJsjWAzhrCpJcvXDO+/f7atWpuaULz139uVvfD0CSFlSQoR5w+JhjQfd4qWvfevHb/70qxc+/cc/PDp9Ig3WiqSgu5mLiCJgEuNfvbe+MQxJRzOXkiS3QqmZb6aoCz5Taa+Ytds4cyZICIUhN2/PXPl9RgQBIBAA17S6XeokqTfVltnpqdz9y4e7J5ePlaLbex3euv2dlbNmJWdVkGZ4ROlI8kBFdB3Z0p5yVfCL6VZ3dnZ+sPYaKm3qMItiTV1ru91NXHKGN05xhDHu5+ono+HmkR7Dz27uvLjtzex8s4t/PNyYWzrUarWb138201sU4YQyo5J0KOsjlIZaIAZAyt7R2bfXy7dfeHGq0/7T1avvX/tzldooBeYKKBEWsZBtfRwwBjR4s4xHy8uvvPw9Cf35m2+s7wxV5s291GU82hdvmlPHn7/4EpMCUASOnzpx67svrL/3m85oHzujnHKFMkQquTa38c5eV3WYckdzR8FKONXysvfYm7+KsNVKpIAEd93brVY11RGysbJbdbPElFh7thM+1vCtu2t3f/u7b37u8wC4+uvVYIR7mO/s7G5vDwkg4OF379176623jxw7bMVf+f4PREiRCVv6hC8jSDAYCABM6dq1D65f/6Cu6y9euPCVLz9PSgDk5KuDEcc+dTxXGQBXV1efHQAHPNzv90spvV5venp6Yp2w7jNTEECALKX0+30Ap0+fFpGPIj92658EqrXXmmhvFQAAAABJRU5ErkJggg=="
+
+# Bus Eco (E/H2)
+ICON_BUS_ECO_B64 = "data:image/png;base64,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"
 
 # Badner Bahn
 ICON_WLB_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAANCAIAAABU/bu/AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkdJHi/0GsAAAS2SURBVDjLPVRbi1tVFP7W2vvknjlJJ8k0zejg1LH1Mq3WC6ioSK1vRRB8VEH8AQr67INabKsoKrQqLaj4IAji9UVbS6+g2FbrpdNpazvTSWZiJplMJic5Jzlr+ZDUDfthf+y1vm997P3RwtKSgggqRABAIAUUg6XAEFYanAAws6qoQgnQIQgooEIgFQIBPGxCIEBVFMzEUAVUiazCACCV4UUFQEM+BUEHyHUtSgSRkIiIQNDrFQBARCRy+Icfu91AVVWFmQFSEcexDz78SDIZE0SIRKGWSGrVamO5LjRg0cHATEQAESuIVAQKDKyBQgl0XRENeInIGHP+7z+PHjsWcWx1sWqN9f1uLJ4Mgm6hULh05cr2x3ZMbpxyiNSAFqq1Tz7+tFJrDvUDBB00I2OXaisinHA4l02Jyv+jX9/QoU4FcdjHcisg6Do3ZkhF+qqqICYYa7oh/XRmbt8rz98yNSVQS9yfKCWnJuN+J4zGTDoRbbR8YqeYdc7N1DIJE3Ta8VS65Mby+WjLUyIt5uILjbYRJz3Cvb52Oj1mU1iXPHTi8mgmZZj7ve6j92+s1TtBGCSjNjfiNLzQ68f+vtY+c/bcLVObSIQ5tG4yev63v/Z98OWRQ6cgrT27P3rt1bcp7LhxnTl3etNNpeXy1fyorrUqb+z58L33D45lowf2f/bmOwdby7WrF2b2H/jm+NGTN46lvNWlvtfoefVuq150nSM/Hd134OtauTxRTHRajdM/n3l824Zjp872Ax8KFhJlwBjrWGaybJJpd8RdB4gibK6t9hH6/Z4KWYqOZHKJpEs2Ek+mM9l1zBYgJmM4Ymyk0/G9TrfXC3y/ryQMMIwQK9mV1V4ul75ry9S5y9XlRhMg8/LLL/3y65lVP5opjY+MjgWIRdzSholJclJz5RV3/cag6yfdsXqr2zGZRL60YWIy5LjERnPFG+Ak1/qxRLYwks11+6a2Cmdk1CTSGkkGZNtwM4WiiaWCgOYrbRtNayRx5GwlHw22TN9mVe2luebnRy4qqYoahsAQ4asT//TXaibmbi6mLy6udL0WJ7Jgy8JfHL6iUFVRyOB5M7Fz+Grba0Uikc2T47+fn40digs5qgBk+7bSzOw/Knbq5qYPZ/byFetYe37mj0Zzdef2eyEiEkJEmI0xxrHN6vz4xNTi1dnpu6arlXI6mxdVM/jCAIEVCMOQLBvHWObmSiMdS3S8tTH31szmAxsxhokpFaGVZqO10i4V886p07N/9WYvXLCl4vjOHQ9Va8t733pXwlDCfigiIgKORSyncmHPJxv5tzL/zFNPfPvd94adYVYwAXr3ndNe1788V07GIrNzlYybJYhjiLXf9nxAlGCIrRMLVb1W9fknH7j9junR3ChdW1wC0Ov1nnv26eV6ffOmzVBdWlqqVCq79+7NjxVEiYgZVCjkTh4/LiKDFFVVAu65717f9z2vk8uNNptNVQI0kYgvlssvvvDC+Pj42Pr1nY538dKlO7dufX3XLmYGkYJovrI4sK6+XPPa3uTkTUTUqDfq9XpxvDR0lYySMjOBoEpECqgKFINUIQz9V4LKIHXD8sK1fD6fSqWDoDc/P+9mMm4mo4Ny1f8APx55cp43CXwAAAAASUVORK5CYII="
+
+# ÖBB Cityjet
+ICON_CITYJET_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAKCAIAAABJ+IsHAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQofMFIV2M0AAAOYSURBVDjLPZPNa5xVFMafc+9N3pl3ZvIxkyYZaUwkmBqbaEPQoSCE6qIW9F/wCyFZ2IWI6M6FIqIgCmJdtEWoCwUX1WJBXKlNmyYWa5MZUz9C0jZkmsw7SeZ73nnvOS7eiXdxl+c5vx/Poc372yxc2Cn0JpNKK600IC2/WSwUcitZz/Nmnj4hLE4kUvA8ZgFAAIiICJB0etB13e2dnXq9DhEBCCAiEBmt792563meMeaxqalUMqWNIVA4wFTK5Vxueen6UiaTcaJRRcr3/YVr84meRKNW70sdurG0VCqVtFL3t7cBsLAIAAEIwv0D6ZHhoT9zud1iEaQFgQAAkcCYTqXJGBOLxcnyyvIfL73yau+hfoEAoI8/+XRi8ujw0JClgFgTtVk0gQFmMHGbUhA+IogAgAjbpq3bJomChgI5jqOM7rDsrf3bEemsR+J+o1mt1Lp6u1MiF7+/9MIbrxMUEZmg1ZJK/covV7xi2yQAIQjz5PiRkeHhBtSBQ4GEpGGqgBE0Ku+9/8HjE2OlvUrN9+fm5uYXritSdnfvwYcON4jeefdDJxp9/rlTp549OX1s8nY298jRCQCGgNULX67s7q9rl8WGyQKCtKq/XlsdSP0TcduJRCEnWESECB2BnVHQ5WpfX5/RlJ+/cfWzzy+srjrRmDaYuZU8efzJj15+kZXSMbfbsgyPfPPV16MPj3U6jgFEbdyecM2QckVs26ZAMQZ361uFOxvdh1sUypY2a/sTVas809mUAFqJUuQ2asn15aeiHVBNAwzurNuLf6UEPmlf093Lyfj4keP9/cViMZ1OGxGJxZxxJ2AqK9EUYgmELcXYrQlvrbFSECL8vxUAKE3E1jwQrxSqwiTMDvHYQPxRa/0WCwtA2moWcRR1KNOyRf33bzf35bvNrTffetsI8FO+knXdaqnSJBERAjREC8UcY8lYELMoEaaDdoEUwTZbStOPm+WmcawESmPND77dKLUavNuot4QJINIAopBE1DHglmr8XK6deKJLG9ByNrtwdV5EvjhzRmljrRXhIAhE8Nrp07V6LQhsu3BtZAKgQNK+KhGRRCIeBLZaqxptjNbnz58DELZXaZ1IJGZnZ32/efbsOc/zLv1w2e1K0L18PpyYy2ZLe/vT09MsvL6+kc9vZTIZJxIBaWY+SAyvCSAQKBQaNlwOtmpWa7du/j46OppMJhuNxuLiYk9Pz7GpKVLKWqu1Mdow8B9Ore+f+YBpFgAAAABJRU5ErkJggg=="
+
+# ÖBB Talent
+ICON_TALENT_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoeLF8PtcMAAAQgSURBVDjLbZRfiNRVFMe/59z7m/8zruu0uq5haflnBd01fYpK7UUNomAlKBBE7UUCo+deih4LeijE1x4iQ4OoEOohkDIjTcUFsXV13dl1dmZ3Zmd2/v5+957Tw+yqRPfl3nMu93PO98D90sxcCQAAJZDif5c+eXwU0MoFQQHS5QyRqhLACiUIABARzMoz6W22h1MiBYge8x9hlQBVBVghKgBouQpBlYhUn2iOQOB6bZGYJiYmFmu1gYGB4eEdRPIfMRZQQMN2W51f1gEApOCevkdYZpw/f/727dsioqLEZG2wa+fIodcOqyqAmULh4sWLbMz9uxNxY5PxuBKcdztGRl5/481EIqGqjwsUinMPCzNn3zu1p1hScqoIwZs/eN9u3S4kJEQqyoZYiBhKgTEQFRFVVVW27BWW2LLxJFBYkZtff9P69feAjZBE1rbUTeX7D5w88cqrB+IcF6j2Rl1eqKBUygdBTKyFABSfrwzuG+wSkYoSQaGsJMTA9et/d1ptEUkmk99duNDqdJRJnbfGpLI5Fem0GmG1HstnW8WSeJ8jrIt8rtP5/uNPig9m3jl2jJgIZEFQuCsumqUgnkjKUjVgY37+JVuY8So2CAgIOx0BsbFht7NhaP2tW7fGxsbGx8fnFxYazU4ynV2sllXc4IZN3U57qVLODaxHIv6wuqDgWjw5rZowwbZO6865c19Bjh4/riALJSi5XK7eP5BMpacmO9bYfDpz7+Z4o1bqf/o5lWh+tpBd/VRuVV9pdnp1X8573+32ARhjstlMPJE01A9IYMgbTmfTQdiipVquGQoDYM9Esfhsfu36+YXL5759af/+ZzZttiBSQtx57TS7otTtqvEmDEkkArcaNYhGYeiiKHIhMYEZRCB470++e3Lb8DAzA2BmFRERL757Z+Luhx+lgkSDyLddm7xrL96nate5dUt07Y/Lm57faqEw4BGVfY2WoSbSCa8aFh/m335r48HDkWEA8KIAFEK4f29y7MiRaqUyMjo6MTmpTB6qquSUmMHGMOc3bigPDtip6Qiy2gSk5IFnYdSQM/jpzNndL+yxgJC4pcjNOamrEwWpEvPdH360O3dl1w4450Q8g5hI1FQqVUNcni/HYrFKpTJXKolIo9FIJdNhGKZSKUvcqFf/WdPXvjfVgiTgWNVBOZNOpnOqrm/3aGrVKioUi43m0m+XLlUX5s988WUmk82k08TUqNUjpVOnT9vAEpFCSaGq3ouqN8YAIOLenKX3vUSMsYG1S/Xa5599mstmkomU865WqzWbrYOHDpWLc5HvHj124sWX91GhOMcKAbzKX39eyefXDA0NRVF048aNIIiN7t1rjenRIapQD132NV0xq8eGt+JA4q9dvRpPJLZs2eK9n34w3Q3D4e3bnXPiPZhT6cy/1/pbXEKBNC4AAAAASUVORK5CYII="
+
+# ÖBB Kiss
+ICON_KISS_B64 = "data:image/png;base64,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"
 
 
 # --- 3. DATEN ---
@@ -185,7 +197,7 @@ def fetch_data(lines_to_check):
                         ac = vh.get("barrierFree", False) or vh.get("foldingRamp", False)
                         
                         if line_name == "U6":
-                            v_type = "u6" # Type T/T1
+                            v_type = "u6"
                         elif "U" in line_name:
                             if ac: v_type = "v_wagen"
                             else: v_type = "silberpfeil"
@@ -193,6 +205,8 @@ def fetch_data(lines_to_check):
                             v_type = "bus"
                         elif line_name == "WLB":
                             v_type = "wlb"
+                        elif line_name.startswith("S") or line_name.startswith("R"):
+                             v_type = "cityjet" # Default für Zug
                         elif ac:
                             if line_name in ["D", "1", "6", "11", "18", "71"]:
                                 v_type = "flexity"
@@ -223,7 +237,6 @@ with st.sidebar:
     st.header("Einstellungen")
     gps_mode = st.toggle("Echtstandort (GPS)", value=False)
     
-    # GPS LOGIK
     if gps_mode:
         st.write("📡 Suche GPS...")
         if HAS_GPS_MODULE:
@@ -250,7 +263,7 @@ with st.sidebar:
         if st.session_state.gps_lat:
             user_lat, user_lon = st.session_state.gps_lat, st.session_state.gps_lon
         else:
-            user_lat, user_lon = 48.2082, 16.3738 # Fallback
+            user_lat, user_lon = 48.2082, 16.3738
 
     if st.button("Aktualisieren"):
         st.rerun()
@@ -269,7 +282,6 @@ vehicles.sort(key=lambda x: x["time"])
 
 # --- 8. KARTE ---
 
-# Center Logic
 if gps_mode and st.session_state.gps_lat:
     map_center = [st.session_state.gps_lat, st.session_state.gps_lon]
 elif 'map_center' in st.session_state:
@@ -283,7 +295,6 @@ m = folium.Map(
     tiles="CartoDB positron"
 )
 
-# User Marker
 folium.Marker(
     [user_lat, user_lon],
     tooltip="Du",
@@ -291,7 +302,6 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
-# Linien
 for line_name in nearby_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -301,14 +311,13 @@ for line_name in nearby_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
-# Stationen
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(nearby_lines):
         icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
         folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Fahrzeug Icons Helper
+# Helper
 def get_icon_props(v):
     if v["type"] == "bus": return ICON_BUS_B64, 30, 8
     if v["type"] == "ulf": return ICON_ULF_B64, 30, 6
@@ -318,6 +327,9 @@ def get_icon_props(v):
     if v["type"] == "x_wagen": return ICON_XWAGEN_B64, 40, 12
     if v["type"] == "u6": return ICON_TYPET_B64, 40, 13
     if v["type"] == "wlb": return ICON_WLB_B64, 40, 13
+    if v["type"] == "cityjet": return ICON_CITYJET_B64, 40, 10
+    if v["type"] == "talent": return ICON_TALENT_B64, 40, 12
+    if v["type"] == "kiss": return ICON_KISS_B64, 40, 12
     return ICON_BIM_OLD_B64, 32, 8
 
 for v in vehicles:
@@ -346,7 +358,7 @@ if not gps_mode and map_data:
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. NEXT AC TILES (STRICT SQUARE) ---
+# --- 9. NEXT AC TILES (KOMPAKT) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
@@ -360,50 +372,50 @@ if vehicles:
                 line_data[v["line"]][dest] = time
 
     if line_data:
-        # Custom CSS for aspect ratio grid
         st.markdown("""
         <style>
         .grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
         }
         .square-tile {
             aspect-ratio: 1 / 1;
-            padding: 10px;
-            border-radius: 8px;
+            padding: 5px;
+            border-radius: 6px;
             color: white;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             overflow: hidden;
+            font-size: 0.8em;
         }
         </style>
         """, unsafe_allow_html=True)
 
-        cols = st.columns(min(len(line_data), 5))
+        cols = st.columns(min(len(line_data), 8)) 
         idx = 0
         
-        # Grid workaround in Streamlit columns
         for line, dests in line_data.items():
-            with cols[idx % 5]:
+            with cols[idx % 8]:
                 bg = LINE_COLORS.get(line, "#555")
                 dest_html = ""
                 for dest_name, min_time in dests.items():
                     dest_html += f"""
-                    <div style='display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 3px;'>
-                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;'>{dest_name}</span>
-                        <span style='font-weight: bold;'>{min_time}m</span>
+                    <div style='display: flex; justify-content: space-between; margin-bottom: 2px;'>
+                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%; font-size: 0.75em;'>{dest_name}</span>
+                        <span style='font-weight: bold; font-size: 0.8em;'>{min_time}m</span>
                     </div>
                     """
                 
                 st.markdown(f"""
                     <div class="square-tile" style="background-color: {bg};">
-                        <div style="text-align: center; font-weight: bold; font-size: 1.5em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px; margin-bottom: 4px;">{line}</div>
-                        <div style="flex-grow: 1; overflow-y: auto; scrollbar-width: none;">
+                        <div style="text-align: center; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 2px;">{line}</div>
+                        <div style="flex-grow: 1; overflow-y: hidden; margin-top: 2px;">
                             {dest_html}
                         </div>
-                        <div style="text-align: center; font-size: 0.7em; margin-top: 5px; opacity: 0.8;">❄️ Klima</div>
+                        <div style="text-align: center; font-size: 0.6em; margin-top: 2px; opacity: 0.9;">❄️ AC</div>
                     </div>
                 """, unsafe_allow_html=True)
                 idx += 1
@@ -412,7 +424,7 @@ if vehicles:
 else:
     st.write("Keine Linien in der Nähe.")
 
-# --- 10. TABELLE (LIVE) MIT BILDERN ---
+# --- 10. TABELLE (LIVE) ---
 st.subheader("📋 Alle Abfahrten (Live)")
 
 if vehicles:
@@ -420,8 +432,19 @@ if vehicles:
     for v in vehicles:
         icon_url, _, _ = get_icon_props(v)
         
+        # Typ Label
+        type_label = "Fahrzeug"
+        if v["type"] == "flexity": type_label = "Flexity"
+        elif v["type"] == "ulf": type_label = "ULF"
+        elif v["type"] == "bus": type_label = "Bus"
+        elif v["type"] == "v_wagen": type_label = "V-Wagen"
+        elif v["type"] == "silberpfeil": type_label = "Silberpfeil"
+        elif v["type"] == "u6": type_label = "Type T"
+        elif v["type"] == "cityjet": type_label = "Cityjet"
+        
         t_data.append({
             "Icon": icon_url, 
+            "Fahrzeug": f"{type_label} ({v['id']})",
             "Linie": v["line"], 
             "Ziel": v["dest"], 
             "Zeit": f"{v['time']} min", 
@@ -432,7 +455,8 @@ if vehicles:
     st.dataframe(
         df, 
         column_config={
-            "Icon": st.column_config.ImageColumn("Typ", width="small"),
+            "Icon": st.column_config.ImageColumn(" ", width="small"),
+            "Fahrzeug": st.column_config.TextColumn("Fahrzeug"),
             "Linie": st.column_config.TextColumn("Linie", width="small"),
             "Zeit": st.column_config.TextColumn("Abfahrt", width="small"),
             "Klima": st.column_config.TextColumn("AC", width="small")
