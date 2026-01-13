@@ -4,10 +4,15 @@ from streamlit_folium import st_folium
 import requests
 import math
 import pandas as pd
-import time
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V26", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V27", layout="wide", page_icon="🚋")
+
+# State Initialisierung
+if 'map_zoom' not in st.session_state:
+    st.session_state.map_zoom = 16
+if 'map_center' not in st.session_state:
+    st.session_state.map_center = [48.2082, 16.3738]
 
 try:
     from streamlit_js_eval import get_geolocation
@@ -25,11 +30,14 @@ st.markdown("""
 
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 
-# Silberpfeil (Type U - U1-U4 Alt)
+# Silberpfeil (Type U)
 ICON_SILBERPFEIL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkSBMRJ7GwAAAQiSURBVDjLdVTJblxFFD33Vr1u92C/HuI4njseAsRxUAZhUCQ+APMNrMCfYj4hbCNWhF1WIHYJysDCgUQQ29gxiePY3Wm323H3e/2GupdFxwIhcVRSlXRL99Q9qnNor94AoKogAgGqUPw/pL8RMUAAVAVQIgL66x/8qwSA/9PIAgpQvwkpnEuJiIhUFEwAEVTVAAJSBqkCBFUACoBAClXtn1WBU3oF1KUpMzOzE0fvAIAUsP17nZPOy52dOImePPmNiKrV6tFhq5DPT9TOMxuPATAUjkSVoK7PoDilPR0ZgJy+I46izY31gYGBkZGRvdevh/zS+Pj42Oi5sfEpYkN79TdpEn1769aZ6pkkTTJZj5lbzaZziSiyNt9tv+gcNc5WC0ypCGIRb6jm5fwgCJgZ4MHikCgR9/UhhaiKiHQ73b5ig4NDZDgMAsOmF4U3bnw6d+F9C0BFfl17vHBpcffVy/n5uUq5vL7xjKBQnBsdCwPZP0qa3c7UxMTe3q44jNbiTNLe2txyzhHzwqUPX7x4xcb6vh8EQZIkBJmZmdzd3SbiMAynp88P+aXn29sD2awTCcKAoBbQw1azG7wV1a2tnfkLc0613X6byWaOj9sj50aPu9Fe40RVUs5tbh0YtjHn5memWketQr4IliR1a0+eGjaT46OHraNUBKq16clWs1UoDh3sN2Zm3zNephf3enEURdHDhw8WLi9aQLe3d4aHz3qeyeUGmA0RQyFpAhHDVCwWSv4QqQ4WBitln8kUCjknqbUmkzUiYi1Xyr41XskfMsZESSJpkqZpnMRFkmzGWsvMbIwVceWS/9fznThK6NVB486d256JG42wVKr2orBYzP3+9LGLo3zBz2YyY5M1MDExFH3Pqbr6wW4UBUdHrWx2YH5+gWwWRIZEVFWIgF7Y3d/fjXq94mAxX/TzRV/SJInjTEaAdPnzLywzGbKHzWMRjeJemqRQpHHiEonj2HpZAonAQd75gAiAS9NOpxuGkSiDiEQUcP3f3Xccaxj2Tk5O4jj1MnlSjePEsBHH3W5iWG0Yhre/+/7atathEARBEMfJ25POcfuICaqSzeb29+vWeu12W1WZGYC1NuqFvV5PVZP0TbN5zGSstQCcc8aamdnZjWd/1Bt1FQJ088+dYqFYrVas51Uq5YOD+vr6Bu0dNN7UD9bW1uqNOoBKpfz16iqUFY6AUqW8/NnyR0tLjx79wkSqcvGDi6urq865paWllZWVw8PDmze/uXx50fM8VVXVQrFw7fr1lS+/EpV8Pq+iA7mB5eXlM8PDcRwz88dLn0xP16gfmf3UJCKo3v/5nl/yp2o1Q3T//oPp2vTs3AVVJQJUiVhVARVVz3p9AUTFOSeqUBVomsQ//fDj4qXF8fEJw3z33t0rV6/45Uo/WYgYwN+Hl2oR8/jiRgAAAABJRU5ErkJggg=="
 
-# V-Wagen (Type V - U1-U4 Neu)
+# V-Wagen (Type V)
 ICON_VWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkiICcMPk4AAAPNSURBVDjLbVRLb1tVEP6+c65v7Dzs2Emchx1QeKqpCn0SR7BpNt2g0v4ONgh2XSAkFqyAJfADoGxAtLQShR8AqCA1rUglRNMmrfNwkia+cXLte+6ZYWFTisQsznxnHjpnRvMN65sNBUAAUFUABuwCoHv+4wbIJ67etZv1tJ3/KuL/pBsfdGEU7RPKJ+HaU/rfh59GBBXa+x0BkKIkSTajvdXVFQCgUQUBBcpjYyOjo/n8EI0FwPpm49dffu60D7Nh1lpL0quoqIgQCmi3lF5xIEgRCawFNU1TKFTUGIoIDAEYY62xBHttUACaJM4Y7u+3Oqk7f+GiqgYkf/rxxuvzcx0FyCiKWvv7JDudTj6fL5fLziUgrbXWBqqq3i8tLZFMEmesmT1yJMhkSMaHcbavT1UFUm/U48M4m8167/v7+4eGBm8tLkJ1rjb33ZeX3zz/ljEmAASKTz7+dGSyehjHB7s782/UxsuTv9+8WZ2u/Hbrj3yhBKOb9bXxiYoXeby9XjtxIrXsU2por350pTRZNdbuNDaKpTGn6LSi8kihWCq9cuzVO7cXtx/vbG9upJ5D+fxYebTZ3I2au8PFEQPQi287l/pUCKUByFSsMSqqquK9T1yaOpcmnSSGS4WgaiKp8eJd0onjpNNOnRMRwpOgwABxfCjeUzUITCbMANo6aL384kt//blMWq5tNj784P3jwoEAmSDYVTXOJ2Fo9qIkl5nIZAVKBQ2NNTDGMlhu7gwo48Q5kalSKSOS6bPZIOuhXtMkTVeb0aBH0h8WhFHiioO5dttFLimXig2VDdr3Ll0KVFWAoWNHBvuyAU3S2h/J59cbjenjx+/V64PjE72hpAIQKIH8dmFytNyM9pPU5wuF0BglCEKEIgbav7H+wszM+lbjmUrl3spKXy5nvde4PTxcLEKz9bUMNABZrVST/oEol4Oi5dzyo0cHBwcPk04Y9o2UClAVQHrEUvF+5f6Dhlt3ztGYwvMzbfGp+C7BSBgair+9tdVqHTTqa2H/QFAorNXrNKY0Xk5Tt7m6uhe1WN/c9kn79p1F7/3dpbvXrn5PQ2OM957kXK12+szpLz77HF06iYhIEFhjLEkVLU+Mn6m99vVXlwkGmeDChYuZMHPlm2+99y5xLnXGmunp6bm5WtxuDwwNbm1tPbz/4O133wkADcLw5KnTIJ6dee5Rvb6wcLZULIro9evXzp07d/To0ampKRElewuEht6LqAIIw7BSqSycXbDWqmoum4vjePne8qmTpyrVKogbN36Yn5+fnZ1NvVdRAMPDw7Dmb2pFJgVZhojuAAAAAElFTkSuQmCC"
+
+# X-Wagen (Type X - U1-U4 Neu - Option)
+ICON_XWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkvFcQRhCAAAAPfSURBVDjLZVRNb1tVEJ259/q9549nx37NF2nTxG6IaCI+mrAgVdogITYsWEOFEql0TXdE+QvAL2ADCxZs2IBEVbpAoqoERSVxahJo0tLWjnHqOE7wi5/fu3eGhZ0UibO6c2fumTnS3IOV2i4AIHSBAAx4HHXBAMh8csndYu5luq+OT/yc6n9g5v9EioB3yk92yjvIXRLu0XNvHgZgYAbAXm+BvebcK0QU3AsYe3MgAgKeNBMo9ht1Zdvzly4rpQBAsdHffndjx3aJFAgUAKInnDWx6Q6DiPxclUS0pFIIxKzJaGImQgBggWAJZCG0EIgojDGhoSgKwYCvzeOff7SVM3fpIgCoMOisrv52+Z13A8OgEKNoZ+O+MUYp6cRTp0bHAUAgCiG6GpBor/y4tVcHFVNKDp/N2246NIa1aTQPt55Us2l74ky2vFkiokw6oxynb3Dw19s/CaW86Vdv3Px+bv4iICgCs725sVetWK7nxJ16tTwzc0EiNht7Mbt559YPaa/fiqlntb/7h0Yi4la9+sr5l+r7jfGxsX8O97/54vOMNxSLp4J2q+0fWLazG4b3DvdnZmekkM1O24knbt+6abSOjHZf8+6slRqNupfzFCBKJSwbdeD7JjBRhzpBzHKIyELhSAmhCbXRQbt92CQGxQalEADAxGRYh63WQSwKyUSOZcfjKbY16o4SkplBCAGQsCyfNGroqJiVn6xUyqcGhnD7r+3lq9fen31dhxEZaoZRO+oc6ehMtv+g4w+nXQqNYcPEiMAMUoinR36/sitBO23ZiNyHEpXA7tpKBUChoVakI62HMtnKYWPASe7rkEDEZ+c2OHbBlW+/Na+YUORy0cvTAlECWC0/oaTj+7mR041HD83wMCLGEBEkAzMzkcan5eTI6WS1mhvo18Yk0q4h6uaYARBkO3C18Y/8zOjZ2oMHlMlYYZs1DnYau9vlYHqKNCvLtguTk79vbaFAIWUYhn9u/sFEUoh0tu8g7BAREQEdfw3kWrV6r3SfiVFg/lxBqpghAgYppVSSiMIgKK2va62llIlEauLFiTDoZDJu9oUhSu99/dWXC/NvKKliVz+81m77UohisbiysiIAUynXGIOIH5ybfHNh4ePl5UajAcy2Y0uplpaW8oX8Z598+qxeL5U2bNtOp93zU1N3f7m7uLjoplIfXb/uplLJZJKZW62Wm0rZcbtWq1Zqu48fPnrvyhURs7G823MuBGai9WIxXyg48XgURWura/lCwfM8AJAIiMjMRNR1ksgYPAGAkDKKNAAYbdbXi+PjY9lsVgixXiyOjo7lPI+IumbS3ZV/AegtHdiMMk7cAAAAAElFTkSuQmCC"
 
 # Type T (U6)
 ICON_TYPET_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAANCAIAAABU/bu/AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkhBUclucoAAATDSURBVDjLPZXLb11XFca/b+19zr3H16/GqblxnLSyceS8mjZIQVBoEaAMisQIhMqAoKodoLYhPP6ASgwRCKmTlhkMoCABUanCI1HTKqJymjSmVLUS+sjDMfiFHd/XOfecvddi4KTfeEm/b7DWb3FpZdXMAIAkTGkCRqOoGY0wAGYQcSJSVRUIgjQARsAI73zQaGrYDimkmlah+vDfH1jQbCCbntlnBADeHYInCSBUVa8oKPTKivEXP/3Z5uaG846kmZmh0Rj8zokTv3z55X6eQwChE0fvPPmtb3zz7Llz/11eiSGo2fDwyKkfnFpYeP/ypcufnpraPTExMzPdzbsWFUBjaGibzaWVVefc73/3SuaT+5rjoao0aKQ6iHcOqiEEM1PYdkWIp9CL0SSaQlGaSYxqkSRJM0SLiXM1XzMKoAYNoapCnJu7+NRTT0/s3k3SAwgxtFqtkV27EoS5M39JqqpvMWUy85XHB4eGhd7MEu9VVUSc9xu3F29eeUeDBo0F3Re+/oRpIpI6J2YwRWkhMcy9/rrkBaGpsHno4NiDe3bvnbyzsTE5OWmAB62Xd/+3tn7u72e//MXPzb/1VjPxLMow0PAPTrx54R9mjCE8/thjFy9dpohAv/TZY++/PX9f3upmg6VzV5r3z118JwKzMzNFv7i1eEshxx5+6D/XP86XV2vdTmg06uP3/+HM36amp6b2TNNoNHFwy7eXs3pmYFnFSN9NapuwLZf0iwqWiKtLLYtqKr6v6BRlt98PLi0q0/qAc+Kcd0mmYK+X572ijGYiWZLU0zQdyFQrHRwuy6rd6X/80fWbizcilQavlFZrK0Ws9XqfyrIRWNYvk2h52dvhE8u7cB4ah8pKN1s0TWMYpUfRTYy+KEIiw+Kk100sNmu1TgzL/YpVyCi1aKGXq4p0uwMRad7O2xva7UEDWOPy6tqvX3xx5V//PLj3AanXbr/62qhqT0PiKMePD/hUownhRYIZRZzj0up6c/7KYrc9kdQXRWa/9kSMUUmBGRBBH4HUfXT+zWYnv9nPJxPf2b9/fHQE9fSVs+d//uofd4xP+L5Wo5PNrXCgduRALFTP/DUxdabeEndgf2Nsp5qamagkZiRByNWr1bvzIs77tMhSf+yoqTmQIIhUoVHBUFy6XHaKEhbFJwdn241s567xfd0eaQT85vr6r1566cAjnxm41ZCA9/ZOLFRaWRkqzty4ObS+QdJ7b5TtwzfY2p2tS6Oj1ejQe3B56kc/uKFQGESEFJgqAOqNwcaHTYE0lwQTW60d9Xqxfuftd+eHf/Pbk6d+zOuLi0W7vdVuFWVVlv2Tzz67trbar8pG1uh02o2h4aOPHH36mWe+/9zzTsRgEUYAahY1QoyVU2cCBUB++8kn981Mv/DCT0JeDI40JPF5u1uv10/+8EeHDh8Sys6dYxrjrsk9Pk3rtR21obExZy6E8nvPPX/hwoUTJ76b1tJU3OnTp488fOTRRz//p9f+DIAgSbvnUZJmik9UCQwONrKstrBwdXZ29vBDh524a9euvXH+ja8ePz42NnZXqCDMuLSyinsSNVPVCNB7D0BIM5hpNAVJAwH7hGNQmlBgRpF7cJpFVTVVyva2QURAd/cj3Mv/Ac+bomVUXkxVAAAAAElFTkSuQmCC"
@@ -175,6 +183,7 @@ def fetch_data(lines_to_check):
                         if line_name == "U6":
                             v_type = "u6" # Type T
                         elif "U" in line_name:
+                            # Wir unterscheiden U-Bahn NUR noch nach AC
                             if ac: v_type = "v_wagen"
                             else: v_type = "silberpfeil"
                         elif "A" in line_name or "Bus" in line_name:
@@ -214,17 +223,14 @@ with st.sidebar:
     if st.button("Aktualisieren"):
         st.rerun()
 
-    # Standardwerte
     user_lat, user_lon = 48.2082, 16.3738
     
-    # GPS LOGIK
     if gps_mode:
         st.write("📡 Suche GPS...")
         if HAS_GPS_MODULE:
             loc = get_geolocation()
             if loc:
-                user_lat = loc['coords']['latitude']
-                user_lon = loc['coords']['longitude']
+                user_lat, user_lon = loc['coords']['latitude'], loc['coords']['longitude']
                 st.success(f"GPS: {user_lat:.4f}, {user_lon:.4f}")
             else:
                 st.warning("Warte...")
@@ -235,7 +241,7 @@ with st.sidebar:
         if sim_scenario == "Stephansplatz":
             user_lat, user_lon = 48.2082, 16.3738
         else:
-            user_lat, user_lon = 48.2050, 16.3650 # Ring
+            user_lat, user_lon = 48.2050, 16.3650
 
 # --- 7. FILTERUNG ---
 
@@ -251,13 +257,11 @@ vehicles.sort(key=lambda x: x["time"])
 
 # --- 8. KARTE ---
 
-# Initialisierung nur wenn keine User-Interaktion stattfand
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [user_lat, user_lon]
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 16
 
-# Bei GPS Aktivierung -> Zentrieren
 if gps_mode and 'last_gps' not in st.session_state:
     st.session_state.map_center = [user_lat, user_lon]
     st.session_state.last_gps = True
@@ -275,7 +279,6 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
-# Linien
 for line_name in nearby_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -285,108 +288,158 @@ for line_name in nearby_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
-# Stationen
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(nearby_lines):
         icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
         folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Fahrzeuge
+# Fahrzeuge zeichnen (Icons zuweisen)
+def get_icon_html(v, rot):
+    border_color = "#0066b3" if v["ac"] else "#d32f2f"
+    current_icon = ICON_BIM_OLD_B64
+    w, h = 32, 8
+    
+    if v["type"] == "bus":
+        current_icon = ICON_BUS_B64; w, h = 30, 8
+    elif v["type"] == "ulf":
+        current_icon = ICON_ULF_B64; w, h = 30, 6
+    elif v["type"] == "flexity":
+        current_icon = ICON_FLEXITY_B64; w, h = 40, 9
+    elif v["type"] == "silberpfeil":
+        current_icon = ICON_SILBERPFEIL_B64; w, h = 40, 12
+    elif v["type"] == "v_wagen":
+        current_icon = ICON_VWAGEN_B64; w, h = 40, 12
+    elif v["type"] == "x_wagen": # Optional falls genutzt
+        current_icon = ICON_XWAGEN_B64; w, h = 40, 12
+    elif v["type"] == "u6":
+        current_icon = ICON_TYPET_B64; w, h = 40, 13
+    elif v["type"] == "wlb":
+        current_icon = ICON_WLB_B64; w, h = 40, 13
+        
+    display_rot = rot - 90
+    return f"""
+    <div style="transform: rotate({display_rot}deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 40px;">
+        <img src="{current_icon}" style="width: {w}px; height: {h}px;">
+        <div style="width: {w}px; height: 3px; background: {border_color}; margin-top: 1px; border-radius: 2px;"></div>
+        <div style="transform: rotate({-display_rot}deg); background: rgba(255,255,255,0.8); color: black; font-weight: bold; font-size: 9px; padding: 0 3px; border-radius: 4px; border: 1px solid #ccc;">
+            {v['line']}
+        </div>
+    </div>
+    """
+
 for v in vehicles:
     lat, lon, rot = get_vehicle_position_and_rotation(v["line"], v["time"])
-    
     if lat and lon:
-        border_color = "#0066b3" if v["ac"] else "#d32f2f"
-        
-        current_icon = ICON_BIM_OLD_B64
-        w, h = 32, 8
-        
-        if v["type"] == "bus":
-            current_icon = ICON_BUS_B64
-            w, h = 30, 8
-        elif v["type"] == "ulf":
-            current_icon = ICON_ULF_B64
-            w, h = 30, 6
-        elif v["type"] == "flexity":
-            current_icon = ICON_FLEXITY_B64
-            w, h = 40, 9
-        elif v["type"] == "silberpfeil":
-            current_icon = ICON_SILBERPFEIL_B64
-            w, h = 40, 12
-        elif v["type"] == "v_wagen":
-            current_icon = ICON_VWAGEN_B64
-            w, h = 40, 12
-        elif v["type"] == "u6":
-            current_icon = ICON_TYPET_B64
-            w, h = 40, 13
-        elif v["type"] == "wlb":
-            current_icon = ICON_WLB_B64
-            w, h = 40, 13
-        
-        display_rot = rot - 90
-        
-        icon_html = f"""
-        <div style="transform: rotate({display_rot}deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 40px;">
-            <img src="{current_icon}" style="width: {w}px; height: {h}px;">
-            <div style="width: {w}px; height: 3px; background: {border_color}; margin-top: 1px; border-radius: 2px;"></div>
-            <div style="transform: rotate({-display_rot}deg); background: rgba(255,255,255,0.8); color: black; font-weight: bold; font-size: 9px; padding: 0 3px; border-radius: 4px; border: 1px solid #ccc;">
-                {v['line']}
-            </div>
-        </div>
-        """
-        folium.Marker([lat, lon], icon=folium.DivIcon(html=icon_html, icon_size=(40,40), icon_anchor=(20,20))).add_to(m)
+        folium.Marker([lat, lon], icon=folium.DivIcon(html=get_icon_html(v, rot), icon_size=(40,40), icon_anchor=(20,20))).add_to(m)
 
-# WICHTIG: returned_objects=[] verhindert den Reload beim Bewegen der Karte!
-st_folium(m, width="100%", height=500, returned_objects=[])
+map_data = st_folium(m, width="100%", height=500, returned_objects=[])
 
-# --- 9. INFO BOXEN ---
+if map_data:
+    new_zoom = map_data.get('zoom')
+    new_center = map_data.get('center')
+    if new_zoom is not None: st.session_state.map_zoom = new_zoom
+    if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
+
+# --- 9. NEXT AC TILES (KOMPAKT & QUADRATISCH) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
-    next_ac = {}
+    # 1. Daten aggregieren: Linie -> Richtung -> Min(Zeit)
+    line_data = {} # { "U3": { "Ottakring": 3, "Simmering": 5 }, "13A": ... }
+    
     for v in vehicles:
         if v["ac"]:
-            key = (v["line"], v["dest"])
-            if key not in next_ac or v["time"] < next_ac[key]:
-                next_ac[key] = v["time"]
+            if v["line"] not in line_data: line_data[v["line"]] = {}
+            dest = v["dest"]
+            time = v["time"]
+            if dest not in line_data[v["line"]] or time < line_data[v["line"]][dest]:
+                line_data[v["line"]][dest] = time
 
-    if next_ac:
-        cols = st.columns(min(len(next_ac), 4)) # Max 4 Spalten
-        i = 0
-        for (line, dest), time_left in next_ac.items():
-            with cols[i % 4]:
+    if line_data:
+        cols = st.columns(min(len(line_data), 4))
+        idx = 0
+        for line, dests in line_data.items():
+            with cols[idx % 4]:
                 bg = LINE_COLORS.get(line, "#555")
+                
+                # HTML für Richtungen bauen
+                dest_html = ""
+                for dest_name, min_time in dests.items():
+                    dest_html += f"""
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;">
+                        <span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%; text-align: left;">{dest_name}</span>
+                        <span style="font-weight: bold;">{min_time} min</span>
+                    </div>
+                    """
+                
+                # Quadratische Kachel
                 st.markdown(f"""
-                    <div style="background-color: {bg}; padding: 10px; border-radius: 5px; color: white; text-align: center; margin-bottom: 10px;">
-                        <div style="font-weight: bold;">Linie {line}</div>
-                        <div style="font-size: 0.8em;">→ {dest}</div>
-                        <div style="font-size: 1.4em; font-weight: bold;">{time_left} min</div>
-                        <div>❄️</div>
+                    <div style="
+                        background-color: {bg}; 
+                        color: white; 
+                        padding: 10px; 
+                        border-radius: 8px; 
+                        margin-bottom: 10px;
+                        height: 140px; /* Fixe Höhe für Quadrat-Look */
+                        display: flex; flex-direction: column; justify-content: flex-start;
+                    ">
+                        <div style="font-size: 1.5em; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; margin-bottom: 5px;">
+                            {line}
+                        </div>
+                        <div style="flex-grow: 1; overflow-y: auto;">
+                            {dest_html}
+                        </div>
+                        <div style="text-align: center; font-size: 0.7em; margin-top: 5px; opacity: 0.8;">❄️ klimatisiert</div>
                     </div>
                 """, unsafe_allow_html=True)
-            i += 1
+                idx += 1
     else:
         st.info("Keine klimatisierten Fahrzeuge in Kürze.")
 else:
     st.write("Keine Linien in der Nähe.")
 
-# --- 10. TABELLE ---
+
+# --- 10. TABELLE (LIVE) MIT ECHTEN ICONS ---
 st.subheader("📋 Alle Abfahrten (Live)")
+
 if vehicles:
+    # Hilfsfunktion für Icons in der Tabelle (HTML wäre in st.dataframe schwierig, wir nutzen Text/Emoji Annäherung oder reine Typenbezeichnung)
+    # Da st.dataframe keine Bilder rendert, nutzen wir Unicode-Hacks oder klare Textbezeichnungen
+    # Um es "hübsch" zu machen, nutzen wir pandas styling ist in Streamlit limitiert.
+    # Wir nehmen die Logik von oben und mappen auf Text.
+    
     t_data = []
     for v in vehicles:
-        t_icon = "🚋"
-        if v["type"] == "u6": t_icon = "🚇 (Type T)"
-        elif v["type"] == "silberpfeil": t_icon = "🚇 (Silberpfeil)"
-        elif v["type"] == "v_wagen": t_icon = "🚇 (V-Wagen)"
-        elif v["type"] == "bus": t_icon = "🚌"
+        # Icon Mapping Textuell
+        icon_str = "Straßenbahn"
+        if v["type"] == "flexity": icon_str = "Flexity 🚋"
+        elif v["type"] == "ulf": icon_str = "ULF 🚋"
+        elif v["type"] == "tram_old": icon_str = "Hochflur 🚋"
+        elif v["type"] == "bus": icon_str = "Bus 🚌"
+        elif v["type"] == "v_wagen": icon_str = "V-Wagen 🚇"
+        elif v["type"] == "x_wagen": icon_str = "X-Wagen 🚇"
+        elif v["type"] == "silberpfeil": icon_str = "Silberpfeil 🚇"
+        elif v["type"] == "u6": icon_str = "Type T 🚇"
+        elif v["type"] == "wlb": icon_str = "Badner Bahn 🚆"
         
         t_data.append({
-            "Typ": t_icon, 
+            "Typ": icon_str, 
             "Linie": v["line"], 
             "Ziel": v["dest"], 
             "Zeit": f"{v['time']} min", 
             "Klima": "❄️" if v["ac"] else "🔥"
         })
-    st.dataframe(pd.DataFrame(t_data), hide_index=True, use_container_width=True)
+        
+    df = pd.DataFrame(t_data)
+    st.dataframe(
+        df, 
+        column_config={
+            "Typ": st.column_config.TextColumn("Fahrzeugtyp"),
+            "Linie": st.column_config.TextColumn("Linie", width="small"),
+            "Zeit": st.column_config.TextColumn("Abfahrt in", width="small"),
+            "Klima": st.column_config.TextColumn("AC", width="small")
+        },
+        hide_index=True, 
+        use_container_width=True
+    )
