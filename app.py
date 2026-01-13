@@ -6,7 +6,7 @@ import math
 import pandas as pd
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V28", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V29", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
@@ -187,8 +187,8 @@ def fetch_data(lines_to_check):
                         if line_name == "U6":
                             v_type = "u6" # Type T/T1
                         elif "U" in line_name:
-                            if ac: v_type = "v_wagen" # V-Wagen (oder X)
-                            else: v_type = "silberpfeil" # Silberpfeil
+                            if ac: v_type = "v_wagen"
+                            else: v_type = "silberpfeil"
                         elif "A" in line_name or "Bus" in line_name:
                             v_type = "bus"
                         elif line_name == "WLB":
@@ -237,7 +237,6 @@ with st.sidebar:
         else:
             st.error("Kein GPS Plugin.")
     else:
-        # Reset GPS wenn ausgeschaltet
         st.session_state.gps_lat = None
         st.session_state.gps_lon = None
 
@@ -270,7 +269,7 @@ vehicles.sort(key=lambda x: x["time"])
 
 # --- 8. KARTE ---
 
-# Center Logic: Wenn GPS aktiv, immer zentrieren. Sonst Session State.
+# Center Logic
 if gps_mode and st.session_state.gps_lat:
     map_center = [st.session_state.gps_lat, st.session_state.gps_lon]
 elif 'map_center' in st.session_state:
@@ -284,12 +283,11 @@ m = folium.Map(
     tiles="CartoDB positron"
 )
 
-# User Marker (Blau für GPS, Grau für Sim)
-color = "blue" if gps_mode else "gray"
+# User Marker
 folium.Marker(
     [user_lat, user_lon],
     tooltip="Du",
-    icon=folium.Icon(color=color, icon="user", prefix="fa"),
+    icon=folium.Icon(color="blue" if gps_mode else "gray", icon="user", prefix="fa"),
     z_index_offset=1100
 ).add_to(m)
 
@@ -320,7 +318,7 @@ def get_icon_props(v):
     if v["type"] == "x_wagen": return ICON_XWAGEN_B64, 40, 12
     if v["type"] == "u6": return ICON_TYPET_B64, 40, 13
     if v["type"] == "wlb": return ICON_WLB_B64, 40, 13
-    return ICON_BIM_OLD_B64, 32, 8 # Fallback Tram Old
+    return ICON_BIM_OLD_B64, 32, 8
 
 for v in vehicles:
     lat, lon, rot = get_vehicle_position_and_rotation(v["line"], v["time"])
@@ -342,14 +340,13 @@ for v in vehicles:
 
 map_data = st_folium(m, width="100%", height=500, returned_objects=[])
 
-# Update State nur wenn GPS nicht aktiv (sonst zittert es)
 if not gps_mode and map_data:
     new_zoom = map_data.get('zoom')
     new_center = map_data.get('center')
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. NEXT AC TILES (QUADRATISCH) ---
+# --- 9. NEXT AC TILES (STRICT SQUARE) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
@@ -363,39 +360,50 @@ if vehicles:
                 line_data[v["line"]][dest] = time
 
     if line_data:
-        cols = st.columns(min(len(line_data), 4))
+        # Custom CSS for aspect ratio grid
+        st.markdown("""
+        <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .square-tile {
+            aspect-ratio: 1 / 1;
+            padding: 10px;
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        cols = st.columns(min(len(line_data), 5))
         idx = 0
+        
+        # Grid workaround in Streamlit columns
         for line, dests in line_data.items():
-            with cols[idx % 4]:
+            with cols[idx % 5]:
                 bg = LINE_COLORS.get(line, "#555")
                 dest_html = ""
                 for dest_name, min_time in dests.items():
                     dest_html += f"""
-                    <div style='display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;'>
-                        <span style='overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%; text-align: left;'>{dest_name}</span>
-                        <span style='font-weight: bold;'>{min_time} min</span>
+                    <div style='display: flex; justify-content: space-between; font-size: 0.8em; margin-bottom: 3px;'>
+                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;'>{dest_name}</span>
+                        <span style='font-weight: bold;'>{min_time}m</span>
                     </div>
                     """
                 
                 st.markdown(f"""
-                    <div style="
-                        background-color: {bg}; 
-                        color: white; 
-                        padding: 10px; 
-                        border-radius: 8px; 
-                        margin-bottom: 10px;
-                        width: 100%;
-                        aspect-ratio: 1 / 1; /* Quadratisch erzwingen */
-                        display: flex; flex-direction: column; justify-content: flex-start;
-                        overflow: hidden;
-                    ">
-                        <div style="font-size: 1.5em; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; margin-bottom: 5px;">
-                            {line}
-                        </div>
-                        <div style="flex-grow: 1; overflow-y: auto;">
+                    <div class="square-tile" style="background-color: {bg};">
+                        <div style="text-align: center; font-weight: bold; font-size: 1.5em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 4px; margin-bottom: 4px;">{line}</div>
+                        <div style="flex-grow: 1; overflow-y: auto; scrollbar-width: none;">
                             {dest_html}
                         </div>
-                        <div style="text-align: center; font-size: 0.7em; margin-top: 5px; opacity: 0.8;">❄️ klimatisiert</div>
+                        <div style="text-align: center; font-size: 0.7em; margin-top: 5px; opacity: 0.8;">❄️ Klima</div>
                     </div>
                 """, unsafe_allow_html=True)
                 idx += 1
@@ -404,7 +412,7 @@ if vehicles:
 else:
     st.write("Keine Linien in der Nähe.")
 
-# --- 10. TABELLE (LIVE) MIT ECHTEN BILDERN ---
+# --- 10. TABELLE (LIVE) MIT BILDERN ---
 st.subheader("📋 Alle Abfahrten (Live)")
 
 if vehicles:
@@ -413,7 +421,7 @@ if vehicles:
         icon_url, _, _ = get_icon_props(v)
         
         t_data.append({
-            "Icon": icon_url, # Base64 String
+            "Icon": icon_url, 
             "Linie": v["line"], 
             "Ziel": v["dest"], 
             "Zeit": f"{v['time']} min", 
@@ -425,4 +433,10 @@ if vehicles:
         df, 
         column_config={
             "Icon": st.column_config.ImageColumn("Typ", width="small"),
-            "Linie": st.column_config.TextColumn("
+            "Linie": st.column_config.TextColumn("Linie", width="small"),
+            "Zeit": st.column_config.TextColumn("Abfahrt", width="small"),
+            "Klima": st.column_config.TextColumn("AC", width="small")
+        },
+        hide_index=True, 
+        use_container_width=True
+    )
