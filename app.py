@@ -6,7 +6,7 @@ import math
 import pandas as pd
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V30", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V31", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
@@ -56,7 +56,7 @@ ICON_FLEXITY_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAA
 ICON_BIM_OLD_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkIBQNjJiEAAAQXSURBVDjLVZTLb5RlFMaf816++b7p2JkOl4ItbXGQBBHFakKkqDTYhQmuXaoLFy4kRqMx/gcujAvDRiEuTEw0LgyEGAgOCAkIBI1KQ0vpBRhocS7ftJ3Ld3nf97goGDzJyTk5z5Pn7H5ULpcBMDMAAEQEgMEAYa0BZiYiZiYCkcDDI/5fa7b/9na7VavVPU8PDAwy86MqALVmcs6taQCSJFlcui+lBIOZeW0AAAshrDGlUomZhRBEVKlUAPT39xPRo7mVSuXs2bPZbHZiYiJJkkajYa31fb9QKEgpmZnK5XIzDFUmQyS0p7XSxKw9T0qZpEmaGGvTOE6FELlcj1La2pSEPH3qZBiGBw8eDIIsCFLKdquVGAPHGT8jSGgtPS/T7nasMZ7nra6sZjzPAWmSWpPmC3kF8PzCgmMCu7GxseMnTpwq/zo8+Pi+vXu/+/4H7emPP3h/dnaOmUdHRz/7/Itao/nJh4eUUrdu3SoWi4c++hQk33vnzTBsSKlWWq2MsHN/HOvJ57a/8Mbhr7+xxnx1+Msrl6/29j7W6nTgmAijzz2jGKjVG6kxnW53//j+KEqkn6s2ms2VFVZB4iwYi/cWjTVP79x5txqS8uIoZsDTmogcAKDT6dyYmd06MtxptRPP++12EMetwkgDKvB8dLvVWqMulJyfn8/39gIgEkIwJicn8z0559g5l/G9bqfVV+jN5XqMM0oSCURJYo0RQF/gmbgd+FqQkEoqrdIkiuOu0sqyc+wADjI6TtOeILuurxjFnajVUTLnHCRICQr84PqNGRKSzpTPVI8f09b9ODc3/sTW3Z7vTCqUVrms63RtnPwt6Uq1Zp0bXV8cVZ5LIj+fPzI1XRX07sjWnsTAukV2P9WqQ8PDtdnZt57cJtLUkZBexqysEhuzYf2RyclNmwcri3df37NnJlzec2BcgdG9dk3+ObVPw01Nx1LJao2ZHMCAFIJ871lBKyaNhLTdWDLHUkTbSzQ4EB79NuOcBBIh9vqZxrnzJeuicxdUYpk4BRMAJVvjL+0+fzEk2sUcXZ/u3/ciwKreqB+dvvm8whhhvtv9yzrWWjAxEYgJvMS8w3KBcRs8qUVKkoiq1lISXdO0BKWBOvMucJuJHV/WKkskwAyygCNuXby0hQBBBeOu3L8/8/PJtw+8SuXyL0t3KuHs7O2Zm/ko4guXpDFw1kpyUmx45eW61m0iAFnnNgOr/1SXp26clqIRZF9rNjdu2lh8akckxB3AAIp5hNG8+jvqIaxxBBtkRGlbdXBAMxTRUGlbbnhoS6lE5XL5AZUAxzy/sFAoFDxPx3GyvLw8MjIsSDyEGQNIjZmbmx8c2sLsmmGY8YP1xeIDdDxgDTcaYbvV6ltXJKLFe/eGhob8bAAHEIm1T8C/kTBUcj/lvpIAAAAASUVORK5CYII="
 
 # Bus Normal
-ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAARCAIAAAAg6XlfAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoiFXP5RDQAAASmSURBVEjHxVVNi51ZEX6eOnXevh9Nf998GTuJSXo0UTCOoiAIuhCHQZwwG52VMKv5JZKFS7fCgDO4nBGEGceOMAZBjZmIi2QSEs2N3E5id9J9++P2fd9TVS6uaYcJDoILa3E4p+o5VaeKOk/x8uXL+H+I/u8uSD6rjIiI+E/WfweegA5wB8dPkK2tLVWNCJJPVxIBAMLt4fahwz0hAU4AHwuhEbG3tzcYDFqtFkl3/y/zc/eqqiZ4EQGCFMAREKq7PXzwEGCET0KKiLuPRqOVlZWIUACDweD8+fMXL148SPejD5wEe7ZiEwxJEel09eSpI8PhcHGxLUCg8dA7dza2NhuETzxExKVLl65cubK0tLSwsKATrYe3Ol0mCWtEW6RYvQ+SkgCIJDLq0cjcgQgPJ1NYbnUkZSCY/PHmno318RMAHibFi5sKG6YsRDCRcPfG7MaNG3Nzc0+bK3j05JmgbK4/mFnsJa22Nx5OadapNhEBwprB3++f/Oz58DLer7szM08e3O/OL0luRSDCm/F+3Qyl3SMigBRol43ZXtWZW9x5sjEzv+DNOGs+sbycc+73+3LQSjHZBOlCpzDrVAepMqSxobEoZm7m7mZmEUEJpKAAICCkwx3uZBGGimRBkiA9zNxKQFJ69513VLXX6/2r1IhYu3OLIlRJ6XCENaVpi1BVVSVAS5IknnYpgu7BIALBhKAjpZQ0ZS+mWZOkBHpBMQ8PBIVQVQfPnTtXVZVOGtQ210l3IBVbH9wDWI9Hze6QmigUJkKSVknViwmCYYywUquSIEFNNEm0en3wt1an/YWV5ev9YXt2JqNBkDDlmBBJmnMmqQCkaepfvvujH75qSnN2p6dJuJsjWAzhrCpJcvXDO+/f7atWpuaULz139uVvfD0CSFlSQoR5w+JhjQfd4qWvfevHb/70qxc+/cc/PDp9Ig3WiqSgu5mLiCJgEuNfvbe+MQxJRzOXkiS3QqmZb6aoCz5Taa+Ytds4cyZICIUhN2/PXPl9RgQBIBAA17S6XeokqTfVltnpqdz9y4e7J5ePlaLbex3euv2dlbNmJWdVkGZ4ROlI8kBFdB3Z0p5yVfCL6VZ3dnZ+sPYaKm3qMItiTV1ru91NXHKGN05xhDHu5+ono+HmkR7Dz27uvLjtzex8s4t/PNyYWzrUarWb138201sU4YQyo5J0KOsjlIZaIAZAyt7R2bfXy7dfeHGq0/7T1avvX/tzldooBeYKKBEWsZBtfRwwBjR4s4xHy8uvvPw9Cf35m2+s7wxV5s291GU82hdvmlPHn7/4EpMCUASOnzpx67svrL/3m85oHzujnHKFMkQquTa38c5eV3WYckdzR8FKONXysvfYm7+KsNVKpIAEd93brVY11RGysbJbdbPElFh7thM+1vCtu2t3f/u7b37u8wC4+uvVYIR7mO/s7G5vDwkg4OF379176623jxw7bMVf+f4PREiRCVv6hC8jSDAYCABM6dq1D65f/6Cu6y9euPCVLz9PSgDk5KuDEcc+dTxXGQBXV1efHQAHPNzv90spvV5venp6Yp2w7jNTEECALKX0+30Ap0+fFpGPIj92658EqrXXmmhvFQAAAABJRU5ErkJggg=="
+ICON_BUS_NORMAL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAARCAIAAAAg6XlfAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoiFXP5RDQAAASmSURBVEjHxVVNi51ZEX6eOnXevh9Nf998GTuJSXo0UTCOoiAIuhCHQZwwG52VMKv5JZKFS7fCgDO4nBGEGceOMAZBjZmIi2QSEs2N3E5id9J9++P2fd9TVS6uaYcJDoILa3E4p+o5VaeKOk/x8uXL+H+I/u8uSD6rjIiI+E/WfweegA5wB8dPkK2tLVWNCJJPVxIBAMLt4fahwz0hAU4AHwuhEbG3tzcYDFqtFkl3/y/zc/eqqiZ4EQGCFMAREKq7PXzwEGCET0KKiLuPRqOVlZWIUACDweD8+fMXL148SPejD5wEe7ZiEwxJEel09eSpI8PhcHGxLUCg8dA7dza2NhuETzxExKVLl65cubK0tLSwsKATrYe3Ol0mCWtEW6RYvQ+SkgCIJDLq0cjcgQgPJ1NYbnUkZSCY/PHmno318RMAHibFi5sKG6YsRDCRcPfG7MaNG3Nzc0+bK3j05JmgbK4/mFnsJa22Nx5OadapNhEBwprB3++f/Oz58DLer7szM08e3O/OL0luRSDCm/F+3Qyl3SMigBRol43ZXtWZW9x5sjEzv+DNOGs+sbycc+73+3LQSjHZBOlCpzDrVAepMqSxobEoZm7m7mZmEUEJpKAAICCkwx3uZBGGimRBkiA9zNxKQFJ69513VLXX6/2r1IhYu3OLIlRJ6XCENaVpi1BVVSVAS5IknnYpgu7BIALBhKAjpZQ0ZS+mWZOkBHpBMQ8PBIVQVQfPnTtXVZVOGtQ210l3IBVbH9wDWI9Hze6QmigUJkKSVknViwmCYYywUquSIEFNNEm0en3wt1an/YWV5ev9YXt2JqNBkDDlmBBJmnMmqQCkaepfvvujH75qSnN2p6dJuJsjWAzhrCpJcvXDO+/f7atWpuaULz139uVvfD0CSFlSQoR5w+JhjQfd4qWvfevHb/70qxc+/cc/PDp9Ig3WiqSgu5mLiCJgEuNfvbe+MQxJRzOXkiS3QqmZb6aoCz5Taa+Ytds4cyZICIUhN2/PXPl9RgQBIBAA17S6XeokqTfVltnpqdz9y4e7J5ePlaLbex3euv2dlbNmJWdVkGZ4ROlI8kBFdB3Z0p5yVfCL6VZ3dnZ+sPYaKm3qMItiTV1ru91NXHKGN05xhDHu5+ono+HmkR7Dz27uvLjtzex8s4t/PNyYWzrUarWb138201sU4YQyo5J0KOsjlIZaIAZAyt7R2bfXy7dfeHGq0/7T1avvX/tzldooBeYKKBEWsZBtfRwwBjR4s4xHy8uvvPw9Cf35m2+s7wxV5s291GU82hdvmlPHn7/4EpMCUASOnzpx67svrL/3m85oHzujnHKFMkQquTa38c5eV3WYckdzR8FKONXysvfYm7+KsNVKpIAEd93brVY11RGysbJbdbPElFh7thM+1vCtu2t3f/u7b37u8wC4+uvVYIR7mO/s7G5vDwkg4OF379176623jxw7bMVf+f4PREiRCVv6hC8jSDAYCABM6dq1D65f/6Cu6y9euPCVLz9PSgDk5KuDEcc+dTxXGQBXV1efHQAHPNzv90spvV5venp6Yp2w7jNTEECALKX0+30Ap0+fFpGPIj92658EqrXXmmhvFQAAAABJRU5ErkJggg=="
 
 # Bus Eco (E/H2)
 ICON_BUS_ECO_B64 = "data:image/png;base64,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"
@@ -86,7 +86,7 @@ STATION_MARKERS = [
     {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "lines": ["U3", "13A", "14A"], "rbl": [267, 266]},
     {"name": "Pilgramgasse (13A)", "lat": 48.1930, "lon": 16.3550, "lines": ["U4", "13A", "14A"], "rbl": [272, 273]},
     {"name": "Alser Straße (43)", "lat": 48.2170, "lon": 16.3420, "lines": ["U6", "43", "44"], "rbl": [4219, 4220, 100, 101]},
-    {"name": "Hauptbahnhof (D)", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18"], "rbl": [150, 151]}
+    {"name": "Hauptbahnhof", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18", "S"], "rbl": [150, 151]}
 ]
 
 RAW_ROUTES = {
@@ -167,9 +167,16 @@ def fetch_data(lines_to_check):
     if not lines_to_check: return []
     
     relevant_rbls = []
+    # Logic: Search stations in database that have these lines. 
+    # For GPS: we already filtered stations by distance in main loop
     for s in STATION_MARKERS:
         if not set(s.get("lines", [])).isdisjoint(lines_to_check):
             relevant_rbls.extend(s["rbl"])
+    
+    # Remove duplicates
+    relevant_rbls = list(set(relevant_rbls))
+
+    if not relevant_rbls: return []
             
     url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, relevant_rbls))}"
     unique_vehicles = {}
@@ -254,9 +261,11 @@ with st.sidebar:
         st.session_state.gps_lon = None
 
     if not gps_mode:
-        sim_scenario = st.radio("Simulation:", ["Stephansplatz", "Ring/Oper"], index=1)
+        sim_scenario = st.radio("Simulation:", ["Stephansplatz", "Ring/Oper", "Hauptbahnhof"], index=1)
         if sim_scenario == "Stephansplatz":
             user_lat, user_lon = 48.2082, 16.3738
+        elif sim_scenario == "Hauptbahnhof":
+            user_lat, user_lon = 48.1850, 16.3750
         else:
             user_lat, user_lon = 48.2050, 16.3650
     else:
@@ -271,6 +280,7 @@ with st.sidebar:
 # --- 7. FILTERUNG ---
 
 nearby_lines = set()
+# Determine nearby lines based on user location vs defined stations
 for s in STATION_MARKERS:
     dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
     if dist < 1200: 
@@ -302,6 +312,7 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
+# Draw Strecken (Polylines)
 for line_name in nearby_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -311,6 +322,7 @@ for line_name in nearby_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
+# Draw Stations
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(nearby_lines):
@@ -319,7 +331,7 @@ for s in STATION_MARKERS:
 
 # Helper
 def get_icon_props(v):
-    if v["type"] == "bus": return ICON_BUS_B64, 30, 8
+    if v["type"] == "bus": return ICON_BUS_NORMAL_B64, 30, 8
     if v["type"] == "ulf": return ICON_ULF_B64, 30, 6
     if v["type"] == "flexity": return ICON_FLEXITY_B64, 40, 9
     if v["type"] == "silberpfeil": return ICON_SILBERPFEIL_B64, 40, 12
@@ -358,7 +370,7 @@ if not gps_mode and map_data:
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. NEXT AC TILES (KOMPAKT) ---
+# --- 9. NEXT AC TILES (GRID SYSTEM FIXED) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
@@ -372,59 +384,85 @@ if vehicles:
                 line_data[v["line"]][dest] = time
 
     if line_data:
-        st.markdown("""
+        # PURE CSS GRID - Fixes the sizing issue completely
+        grid_html = """
         <style>
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .square-tile {
-            aspect-ratio: 1 / 1;
-            padding: 5px;
-            border-radius: 6px;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            overflow: hidden;
-            font-size: 0.8em;
-        }
+            .grid-container {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+            .grid-item {
+                aspect-ratio: 1 / 1;
+                border-radius: 8px;
+                color: white;
+                padding: 8px;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                overflow: hidden;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .line-title {
+                text-align: center; 
+                font-weight: bold; 
+                font-size: 1.2em; 
+                border-bottom: 1px solid rgba(255,255,255,0.3); 
+                padding-bottom: 4px;
+                margin-bottom: 4px;
+            }
+            .dest-row {
+                display: flex; 
+                justify-content: space-between; 
+                margin-bottom: 2px;
+                font-size: 0.8em;
+            }
+            .dest-name {
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                max-width: 65%;
+            }
+            .ac-icon {
+                text-align: center; 
+                font-size: 0.7em; 
+                margin-top: 2px; 
+                opacity: 0.9;
+            }
         </style>
-        """, unsafe_allow_html=True)
+        <div class="grid-container">
+        """
 
-        cols = st.columns(min(len(line_data), 8)) 
-        idx = 0
-        
         for line, dests in line_data.items():
-            with cols[idx % 8]:
-                bg = LINE_COLORS.get(line, "#555")
-                dest_html = ""
-                for dest_name, min_time in dests.items():
-                    dest_html += f"""
-                    <div style='display: flex; justify-content: space-between; margin-bottom: 2px;'>
-                        <span style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 65%; font-size: 0.75em;'>{dest_name}</span>
-                        <span style='font-weight: bold; font-size: 0.8em;'>{min_time}m</span>
-                    </div>
-                    """
-                
-                st.markdown(f"""
-                    <div class="square-tile" style="background-color: {bg};">
-                        <div style="text-align: center; font-weight: bold; font-size: 1.1em; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 2px;">{line}</div>
-                        <div style="flex-grow: 1; overflow-y: hidden; margin-top: 2px;">
-                            {dest_html}
-                        </div>
-                        <div style="text-align: center; font-size: 0.6em; margin-top: 2px; opacity: 0.9;">❄️ AC</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                idx += 1
+            bg = LINE_COLORS.get(line, "#555")
+            
+            dests_html = ""
+            for dest_name, min_time in dests.items():
+                dests_html += f"""
+                <div class="dest-row">
+                    <span class="dest-name">{dest_name}</span>
+                    <span style="font-weight: bold;">{min_time}m</span>
+                </div>
+                """
+            
+            grid_html += f"""
+            <div class="grid-item" style="background-color: {bg};">
+                <div class="line-title">{line}</div>
+                <div style="flex-grow: 1; overflow-y: hidden;">{dests_html}</div>
+                <div class="ac-icon">❄️ AC</div>
+            </div>
+            """
+        
+        grid_html += "</div>"
+        st.markdown(grid_html, unsafe_allow_html=True)
+        
     else:
         st.info("Keine klimatisierten Fahrzeuge in Kürze.")
 else:
     st.write("Keine Linien in der Nähe.")
 
-# --- 10. TABELLE (LIVE) ---
+# --- 10. TABELLE (LIVE) FIXED ---
 st.subheader("📋 Alle Abfahrten (Live)")
 
 if vehicles:
@@ -432,7 +470,6 @@ if vehicles:
     for v in vehicles:
         icon_url, _, _ = get_icon_props(v)
         
-        # Typ Label
         type_label = "Fahrzeug"
         if v["type"] == "flexity": type_label = "Flexity"
         elif v["type"] == "ulf": type_label = "ULF"
@@ -441,10 +478,15 @@ if vehicles:
         elif v["type"] == "silberpfeil": type_label = "Silberpfeil"
         elif v["type"] == "u6": type_label = "Type T"
         elif v["type"] == "cityjet": type_label = "Cityjet"
+        elif v["type"] == "talent": type_label = "Talent"
+        elif v["type"] == "kiss": type_label = "Kiss"
+        
+        # Combined Text for second column
+        descr = f"{type_label} ({v['id']})"
         
         t_data.append({
             "Icon": icon_url, 
-            "Fahrzeug": f"{type_label} ({v['id']})",
+            "Fahrzeug": descr,
             "Linie": v["line"], 
             "Ziel": v["dest"], 
             "Zeit": f"{v['time']} min", 
@@ -452,11 +494,12 @@ if vehicles:
         })
         
     df = pd.DataFrame(t_data)
+    
     st.dataframe(
         df, 
         column_config={
-            "Icon": st.column_config.ImageColumn(" ", width="small"),
-            "Fahrzeug": st.column_config.TextColumn("Fahrzeug"),
+            "Icon": st.column_config.ImageColumn("", width="small"), # Small is approx 40-50px
+            "Fahrzeug": st.column_config.TextColumn("Typ (ID)"),
             "Linie": st.column_config.TextColumn("Linie", width="small"),
             "Zeit": st.column_config.TextColumn("Abfahrt", width="small"),
             "Klima": st.column_config.TextColumn("AC", width="small")
