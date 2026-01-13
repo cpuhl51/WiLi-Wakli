@@ -7,14 +7,11 @@ import pandas as pd
 import time
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V24", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V25", layout="wide", page_icon="🚋")
 
-if 'last_refresh' not in st.session_state:
-    st.session_state.last_refresh = time.time()
-
-# Zoom & Center State initialisieren
+# Zoom & Center State initialisieren, falls noch nicht vorhanden
 if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = 14
+    st.session_state.map_zoom = 15 # Etwas näher dran für den Start
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [48.2082, 16.3738]
 
@@ -34,11 +31,8 @@ st.markdown("""
 
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 
-# Silberpfeil (Type U - Neu!)
+# Silberpfeil (Type U)
 ICON_SILBERPFEIL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkSBMRJ7GwAAAQiSURBVDjLdVTJblxFFD33Vr1u92C/HuI4njseAsRxUAZhUCQ+APMNrMCfYj4hbCNWhF1WIHYJysDCgUQQ29gxiePY3Wm323H3e/2GupdFxwIhcVRSlXRL99Q9qnNor94AoKogAgGqUPw/pL8RMUAAVAVQIgL66x/8qwSA/9PIAgpQvwkpnEuJiIhUFEwAEVTVAAJSBqkCBFUACoBAClXtn1WBU3oF1KUpMzOzE0fvAIAUsP17nZPOy52dOImePPmNiKrV6tFhq5DPT9TOMxuPATAUjkSVoK7PoDilPR0ZgJy+I46izY31gYGBkZGRvdevh/zS+Pj42Oi5sfEpYkN79TdpEn1769aZ6pkkTTJZj5lbzaZziSiyNt9tv+gcNc5WC0ypCGIRb6jm5fwgCJgZ4MHikCgR9/UhhaiKiHQ73b5ig4NDZDgMAsOmF4U3bnw6d+F9C0BFfl17vHBpcffVy/n5uUq5vL7xjKBQnBsdCwPZP0qa3c7UxMTe3q44jNbiTNLe2txyzhHzwqUPX7x4xcb6vh8EQZIkBJmZmdzd3SbiMAynp88P+aXn29sD2awTCcKAoBbQw1azG7wV1a2tnfkLc0613X6byWaOj9sj50aPu9Fe40RVUs5tbh0YtjHn5memWketQr4IliR1a0+eGjaT46OHraNUBKq16clWs1UoDh3sN2Zm3zNephf3enEURdHDhw8WLi9aQLe3d4aHz3qeyeUGmA0RQyFpAhHDVCwWSv4QqQ4WBitln8kUCjknqbUmkzUiYi1Xyr41XskfMsZESSJpkqZpnMRFkmzGWsvMbIwVceWS/9fznThK6NVB486d256JG42wVKr2orBYzP3+9LGLo3zBz2YyY5M1MDExFH3Pqbr6wW4UBUdHrWx2YH5+gWwWRIZEVFWIgF7Y3d/fjXq94mAxX/TzRV/SJInjTEaAdPnzLywzGbKHzWMRjeJemqRQpHHiEonj2HpZAonAQd75gAiAS9NOpxuGkSiDiEQUcP3f3Xccaxj2Tk5O4jj1MnlSjePEsBHH3W5iWG0Yhre/+/7atathEARBEMfJ25POcfuICaqSzeb29+vWeu12W1WZGYC1NuqFvV5PVZP0TbN5zGSstQCcc8aamdnZjWd/1Bt1FQJ088+dYqFYrVas51Uq5YOD+vr6Bu0dNN7UD9bW1uqNOoBKpfz16iqUFY6AUqW8/NnyR0tLjx79wkSqcvGDi6urq865paWllZWVw8PDmze/uXx50fM8VVXVQrFw7fr1lS+/EpV8Pq+iA7mB5eXlM8PDcRwz88dLn0xP16gfmf3UJCKo3v/5nl/yp2o1Q3T//oPp2vTs3AVVJQJUiVhVARVVz3p9AUTFOSeqUBVomsQ//fDj4qXF8fEJw3z33t0rV6/45Uo/WYgYwN+Hl2oR8/jiRgAAAABJRU5ErkJggg=="
-
-# V-Wagen (Moderner) - Fallback
-ICON_VWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAICAIAAACOpC0PAAAAB3RJTUUH6gELByIbufKlvAAAAoZJREFUeJwFwUtvE1cUAOBz7p3ruWMPmdjjsT3EDxLCQ0iNBCFiB1WldtsdVTf9U0hdsWHbSuzYs4jEAgRIeZBA7VIbG8ePODN+zePOPf0+HF3ORqPR57PTvFXQBFprQEBERAQCQAACAMqINBESccYZY4igiYhIKXV+dp6lKQEgMm6w+lbDcTb2Dw4Mr7j557Nn8Xr9YP9gPB4N+gORE5yx1o1tpTUSASLjbDgYzMNAqcz1PM/z0jhmiDJfWC7n0XLBGOec1+v++dnnXpa9fPu22WoZQBRF6+cvXux8OA6G3677FadYGvzXnadUrNZ67Xblen29CLmKm82GzrLBxYCkE0dxvFrWGq2rYbfmbjpFNwzDMJiNx5c3b+1WSm670zYIQBjiUaV6z5JBxedC2ClVC7bghgFw13OlAZmdT0G6QsQAvu1YwiQptG0WDBZ5XsZApiph3HTLoZkvFWxCfXj42kDEOIl/efzkyf37neFwvVxJkUtUWnFLZi5nmqbKFDD2tdcFpTJNQua3fR8RkWGaJJMwmF3NpDC5ISxLrhYLpam2YY1AG+s42X+4//749A1jX5bzk6MjlaliqfTQK6dJNP3eRwacGcP+YL4IieBGq3U+z48mY8ZYza8mHI673cUqtCz71u5tIr3VaCylfPX3X2wyC3786ec/nj59tPfD6bv3mKhtf6t9fJIGQe3aRu/00/Tf3sU/HYsxf9Mt29e4ypplV0SREa33dnbD76N+p7Pt11eXl2cfP+zdvWNzfjWZ/Prb7/htONZaW5aU0pxOp47jbNqFr71+zsyVvLJEBAAAIAAFwAAIgAAEAABEmiYXF1mqWs16MF8sViuvWkmTVOYEAvwPrDxG5Tsp8voAAAAASUVORK5CYII="
 
 # ULF
 ICON_ULF_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAGCAIAAABb17kDAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkCBI6L/j0AAAHASURBVCjPLdHNU9NAGAfg97ddm2xC+k0NiOg4I87gf4D4l+MV5KAePEA/ZGRsSytJv0u72WTf9YDn5/hg+PgIosnDeDwZ53nearY83wNARETUajaTJAVAIBARwZEjIgCNej1J0tVyeXtzc/rxNFBhOp8KgYM4fhkfAELC0Y/v375cXNRqNRYEgAgABATb4q7fbbdfhZWoJP6Lc+wKR8S9Tic+PAyDkIiSNIEAOweC8rz3Jydn558liHqdzm23v1jMokrVOdJaM7MXhDbbfTh59/X62lOBY9a7HQHK9wVEYYu3x4dXV9ey7DFzEEWOma192mz2KlVmPvt0LlfLZWm9bC1mR5Xq2mTMrpDlXGuhM2tyZ60y+qDd3qSpKAGAM7oWx6PRSErsOxaWc1uUtzvpOC/yN1HoVvPNcDD+O5HdXufn5WUt8FebldS64al8vaTCWlnKXkhTFFVrzeBeAXElckSP6+32/nckS5nOYilUrovMlDItlZcYw2TrSo37v+56Pfx5GI+Gg+32iQgC0Jmezee+5xtj9pvNZnt/lk6JiPAcCHLPwdyoNdLpNEkTFShjTBTueb4vhAChXPaOjl//A2YO+xQMJTAwAAAAAElFTkSuQmCC"
@@ -51,6 +45,10 @@ ICON_BIM_OLD_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAA
 
 # Bus
 ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAHCAIAAACQi2qmAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAAd0SU1FB+oBDQg4Nfs+SkkAAAIMSURBVCjPJc85T1RRGAbg9/vOOffcubM7IgqDCdg4A7GwMBYkdGLsbfwFJvrfwFho4UJBYVxiAHc0hmUGhsWZ4S5zmbt8FvRP81CndyQiAAACkKVJODzLCQKx2ilWqwAAgRBILgwEEPH9YZakBAihVK4oowkCQIQulBaRo2739coKQxRzv3vYWXubCTKI1Gu3H9xnVqZavTw9I4TdjU1AiIgEm6urCEc5icMys7RUnWqmIiAC8d17y7M35jSAUb//5sXLY8lyQZKMueASmBhW6y/Pnhvr1ireteaUa+362rpXqqTJWClF1smMo4y+UnD62z/lz++uH2XMNhr1wuDxk6f64tc0TqhMqoxJxqVyWSk9igOlrbB/qd7QNPa8omtdrzJRn5gYRYHWjtJmHIXGODHTP39oC0Xj6ZJXKli/Nd92rNUAtHXnDvaocfVHrXEzy1rbv2IlB7XG16pp57K8vbXfanWslSx91D89POnVHOfV9VnFeHjcrcWJIQyYB6rXaUx+Po+niequx8waABwji4vnG9/OozBI4nfNxlhx8SSIjRPH0YB4kKY5mBnfs/Tszq2dT1vhsA+l/DhxNBSwPlmLymV3/zQpcSc4IwIRUad3BBGAcslzESba2fk7iuJWe0FyIRKC5CAwCJQmyccP79ut+XKlBFJCooTSPOvs7gVRMN9eyAECiATE/wFeLf0Ld9L4ZwAAAABJRU5ErkJggg=="
+
+# Badner Bahn (Neu!)
+ICON_WLB_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAANCAIAAABU/bu/AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkdJHi/0GsAAAS2SURBVDjLPVRbi1tVFP7W2vvknjlJJ8k0zejg1LH1Mq3WC6ioSK1vRRB8VEH8AQr67INabKsoKrQqLaj4IAji9UVbS6+g2FbrpdNpazvTSWZiJplMJic5Jzlr+ZDUDfthf+y1vm997P3RwtKSgggqRABAIAUUg6XAEFYanAAws6qoQgnQIQgooEIgFQIBPGxCIEBVFMzEUAVUiazCACCV4UUFQEM+BUEHyHUtSgSRkIiIQNDrFQBARCRy+Icfu91AVVWFmQFSEcexDz78SDIZE0SIRKGWSGrVamO5LjRg0cHATEQAESuIVAQKDKyBQgl0XRENeInIGHP+7z+PHjsWcWx1sWqN9f1uLJ4Mgm6hULh05cr2x3ZMbpxyiNSAFqq1Tz7+tFJrDvUDBB00I2OXaisinHA4l02Jyv+jX9/QoU4FcdjHcisg6Do3ZkhF+qqqICYYa7oh/XRmbt8rz98yNSVQS9yfKCWnJuN+J4zGTDoRbbR8YqeYdc7N1DIJE3Ta8VS65Mby+WjLUyIt5uILjbYRJz3Cvb52Oj1mU1iXPHTi8mgmZZj7ve6j92+s1TtBGCSjNjfiNLzQ68f+vtY+c/bcLVObSIQ5tG4yev63v/Z98OWRQ6cgrT27P3rt1bcp7LhxnTl3etNNpeXy1fyorrUqb+z58L33D45lowf2f/bmOwdby7WrF2b2H/jm+NGTN46lvNWlvtfoefVuq150nSM/Hd134OtauTxRTHRajdM/n3l824Zjp872Ax8KFhJlwBjrWGaybJJpd8RdB4gibK6t9hH6/Z4KWYqOZHKJpEs2Ek+mM9l1zBYgJmM4Ymyk0/G9TrfXC3y/ryQMMIwQK9mV1V4ul75ry9S5y9XlRhMg8/LLL/3y65lVP5opjY+MjgWIRdzSholJclJz5RV3/cag6yfdsXqr2zGZRL60YWIy5LjERnPFG+Ak1/qxRLYwks11+6a2Cmdk1CTSGkkGZNtwM4WiiaWCgOYrbRtNayRx5GwlHw22TN9mVe2luebnRy4qqYoahsAQ4asT//TXaibmbi6mLy6udL0WJ7Jgy8JfHL6iUFVRyOB5M7Fz+Grba0Uikc2T47+fn40digs5qgBk+7bSzOw/Knbq5qYPZ/byFetYe37mj0Zzdef2eyEiEkJEmI0xxrHN6vz4xNTi1dnpu6arlXI6mxdVM/jCAIEVCMOQLBvHWObmSiMdS3S8tTH31szmAxsxhokpFaGVZqO10i4V886p07N/9WYvXLCl4vjOHQ9Va8t733pXwlDCfigiIgKORSyncmHPJxv5tzL/zFNPfPvd94adYVYwAXr3ndNe1788V07GIrNzlYybJYhjiLXf9nxAlGCIrRMLVb1W9fknH7j9junR3ChdW1wC0Ov1nnv26eV6ffOmzVBdWlqqVCq79+7NjxVEiYgZVCjkTh4/LiKDFFVVAu65717f9z2vk8uNNptNVQI0kYgvlssvvvDC+Pj42Pr1nY538dKlO7dufX3XLmYGkYJovrI4sK6+XPPa3uTkTUTUqDfq9XpxvDR0lYySMjOBoEpECqgKFINUIQz9V4LKIHXD8sK1fD6fSqWDoDc/P+9mMm4mo4Ny1f8APx55cp43CXwAAAAASUVORK5CYII="
+
 
 # --- 3. DATEN ---
 STATION_MARKERS = [
@@ -67,7 +65,6 @@ STATION_MARKERS = [
     {"name": "Hauptbahnhof (D)", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18"], "rbl": [150, 151]}
 ]
 
-# Koordinaten-Pfade für Linien
 RAW_ROUTES = {
     "U1": [[48.1530, 16.3850], [48.1700, 16.3800], [48.1870, 16.3750], [48.2000, 16.3700], [48.2082, 16.3738], [48.2130, 16.3780], [48.2180, 16.3900], [48.2250, 16.4000], [48.2450, 16.4400], [48.2600, 16.4500]], 
     "13A": [[48.2020, 16.3380], [48.2005, 16.3420], [48.1990, 16.3450], [48.1970, 16.3490], [48.1960, 16.3550], [48.1945, 16.3580], [48.1930, 16.3600], [48.1850, 16.3650]], 
@@ -81,7 +78,7 @@ RAW_ROUTES = {
 
 LINE_COLORS = {
     "U1": "#E2021A", "U2": "#A365A4", "U3": "#F67F21", "U4": "#009641", "U6": "#9D6643",
-    "S": "#00549F", "13A": "#E3001B", "D": "#E3001B", "43": "#E3001B", "1": "#E3001B"
+    "S": "#00549F", "13A": "#E3001B", "D": "#E3001B", "43": "#E3001B", "1": "#E3001B", "WLB": "#00549F"
 }
 
 # --- 4. MATHEMATIK ---
@@ -139,24 +136,17 @@ def get_vehicle_position_and_rotation(line_name, minutes_away):
     rotation = calculate_bearing(p1, p2)
     return p1[0], p1[1], rotation
 
-# --- 5. DATEN & LOGIK (ÜBERARBEITET) ---
+# --- 5. DATEN & LOGIK ---
 
 @st.cache_data(ttl=10)
 def fetch_data(lines_to_check):
-    """
-    NEU: Sucht ALLE RBLs für die gewünschten Linien.
-    Damit finden wir Fahrzeuge auch wenn sie weit weg sind.
-    """
     if not lines_to_check: return []
     
-    # Wir sammeln ALLE RBLs von ALLEN Stationen, die diese Linien führen.
     relevant_rbls = []
     for s in STATION_MARKERS:
-        # Hat diese Station eine der Linien?
         if not set(s.get("lines", [])).isdisjoint(lines_to_check):
             relevant_rbls.extend(s["rbl"])
             
-    # API Abfrage
     url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, relevant_rbls))}"
     unique_vehicles = {}
 
@@ -167,12 +157,10 @@ def fetch_data(lines_to_check):
         for mon in data.get("data", {}).get("monitors", []):
             for line in mon.get("lines", []):
                 line_name = line.get("name")
-                # Nur speichern wenn die Linie relevant ist
                 if line_name not in lines_to_check: continue
                 
                 direction = line.get("towards")
                 for i, dep in enumerate(line.get("departures", {}).get("departure", [])):
-                    # Wir nehmen jetzt mehr Fahrzeuge pro Monitor
                     if i >= 4: break 
                     countdown = dep.get("departureTime", {}).get("countdown", 99)
                     
@@ -189,6 +177,8 @@ def fetch_data(lines_to_check):
                             v_type = "ubahn"
                         elif "A" in line_name or "Bus" in line_name:
                             v_type = "bus"
+                        elif line_name == "WLB":
+                            v_type = "wlb"
                         elif ac:
                             if line_name in ["D", "1", "6", "11", "18", "71"]:
                                 v_type = "flexity"
@@ -204,7 +194,6 @@ def fetch_data(lines_to_check):
                             "type": v_type
                         }
                         
-                        # Deduplizierung
                         if v_id in unique_vehicles:
                             if countdown < unique_vehicles[v_id]["time"]:
                                 unique_vehicles[v_id] = new_entry
@@ -220,8 +209,7 @@ with st.sidebar:
     st.header("Einstellungen")
     gps_mode = st.toggle("Echtstandort (GPS)", value=False)
     
-    if st.button("Manuell Refresh"):
-        st.session_state.last_refresh = time.time()
+    if st.button("Aktualisieren"):
         st.rerun()
 
     user_lat, user_lon = 48.2082, 16.3738
@@ -246,19 +234,18 @@ with st.sidebar:
 
 # --- 7. FILTERUNG & ZOOM ERHALT ---
 
-# Welche Linien sind in meiner Nähe?
 nearby_lines = set()
 for s in STATION_MARKERS:
     dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
-    if dist < 1200: # 1.2km Radius um mich herum
+    if dist < 1200: 
         for l in s.get("lines", []):
             nearby_lines.add(l)
 
-# Jetzt laden wir ALLE Fahrzeuge dieser Linien (auch weit weg)
 vehicles = fetch_data(nearby_lines)
 vehicles.sort(key=lambda x: x["time"])
 
-# Karte erstellen mit gespeichertem Zoom
+# --- 8. KARTE ---
+
 m = folium.Map(
     location=st.session_state.map_center, 
     zoom_start=st.session_state.map_zoom, 
@@ -272,7 +259,7 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
-# Linien zeichnen
+# Linien
 for line_name in nearby_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -283,14 +270,14 @@ for line_name in nearby_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
-# Stationen zeichnen (Alle die zu den Linien gehören)
+# Stationen
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(nearby_lines):
         icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
         folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Fahrzeuge zeichnen
+# Fahrzeuge
 for v in vehicles:
     lat, lon, rot = get_vehicle_position_and_rotation(v["line"], v["time"])
     
@@ -310,9 +297,11 @@ for v in vehicles:
             current_icon = ICON_FLEXITY_B64
             w, h = 40, 9
         elif v["type"] == "ubahn":
-            # Hier: Silberpfeil ist Standard für U-Bahn
             current_icon = ICON_SILBERPFEIL_B64
             w, h = 40, 12
+        elif v["type"] == "wlb":
+            current_icon = ICON_WLB_B64
+            w, h = 40, 13
         
         display_rot = rot - 90
         
@@ -327,17 +316,54 @@ for v in vehicles:
         """
         folium.Marker([lat, lon], icon=folium.DivIcon(html=icon_html, icon_size=(40,40), icon_anchor=(20,20))).add_to(m)
 
-# Karte rendern und State updaten
+# Karte rendern und State updaten (MIT FEHLERBEHEBUNG FÜR KEYERROR)
 map_data = st_folium(m, width="100%", height=500)
 
-# Wenn der User zoomt/bewegt, speichern wir das für den nächsten Refresh
-if map_data['zoom'] is not None:
-    st.session_state.map_zoom = map_data['zoom']
-if map_data['center'] is not None:
-    st.session_state.map_center = [map_data['center']['lat'], map_data['center']['lng']]
+if map_data:
+    # Verwende .get() um KeyError zu vermeiden, falls Schlüssel noch nicht existieren
+    new_zoom = map_data.get('zoom')
+    new_center = map_data.get('center')
+    
+    if new_zoom is not None:
+        st.session_state.map_zoom = new_zoom
+    if new_center is not None and 'lat' in new_center and 'lng' in new_center:
+        st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. TABELLE ---
-st.subheader("📋 Abfahrten (Live)")
+# --- 9. INFO BOXEN FÜR NÄCHSTE KLIMATISIERTE FAHRZEUGE ---
+st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
+
+if vehicles:
+    # Gruppiere nach Linie und Richtung, finde das jeweils kürzeste Zeit-Intervall für AC=True
+    next_ac_vehicles = {} # Key: (Line, Dest), Value: Min Time
+    
+    for v in vehicles:
+        if v["ac"]:
+            key = (v["line"], v["dest"])
+            if key not in next_ac_vehicles or v["time"] < next_ac_vehicles[key]:
+                next_ac_vehicles[key] = v["time"]
+
+    if next_ac_vehicles:
+        # Erstelle Spalten für die Anzeige
+        cols = st.columns(len(next_ac_vehicles))
+        for i, ((line, dest), time_left) in enumerate(next_ac_vehicles.items()):
+            with cols[i]:
+                # Farbe basierend auf Linie
+                bg_color = LINE_COLORS.get(line, "#555")
+                st.markdown(f"""
+                    <div style="background-color: {bg_color}; padding: 10px; border-radius: 5px; color: white; text-align: center; margin-bottom: 10px;">
+                        <div style="font-weight: bold; font-size: 1.2em;">Linie {line}</div>
+                        <div style="font-size: 0.9em;">→ {dest}</div>
+                        <div style="font-size: 1.5em; font-weight: bold; margin-top: 5px;">{time_left} min</div>
+                        <div style="font-size: 0.8em;">❄️ klimatisiert</div>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.info("Derzeit keine klimatisierten Fahrzeuge auf den Linien in deiner Nähe unterwegs.")
+else:
+    st.write("Keine aktiven Linien in der Nähe gefunden.")
+
+# --- 10. TABELLE (LIVE) ---
+st.subheader("📋 Alle Abfahrten (Live)")
 if vehicles:
     t_data = []
     for v in vehicles:
@@ -346,6 +372,7 @@ if vehicles:
         if v["type"] == "flexity": t = "🚋 (Flexity)"
         if v["type"] == "bus": t = "🚌"
         if v["type"] == "ubahn": t = "🚇 (Silberpfeil)"
+        if v["type"] == "wlb": t = "🚆 (Badner Bahn)"
         
         t_data.append({
             "Typ": t, 
@@ -355,8 +382,3 @@ if vehicles:
             "Klima": "❄️" if v["ac"] else "🔥"
         })
     st.dataframe(pd.DataFrame(t_data), hide_index=True, use_container_width=True)
-else:
-    st.info("Keine Fahrzeuge gefunden.")
-
-time.sleep(15)
-st.rerun()
