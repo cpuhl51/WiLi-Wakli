@@ -7,7 +7,7 @@ import pandas as pd
 import random
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V32", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V33", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
@@ -28,6 +28,11 @@ except ImportError:
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; }
+    /* Fix für Streamlit Tabellen Bilder */
+    td img {
+        max-height: 40px !important;
+        object-fit: contain;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -45,7 +50,7 @@ ICON_BUS_NORMAL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAARCAI
 ICON_BUS_ECO_B64 = "data:image/png;base64,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"
 ICON_WLB_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAANCAIAAABU/bu/AAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkdJHi/0GsAAAS2SURBVDjLPVRbi1tVFP7W2vvknjlJJ8k0zejg1LH1Mq3WC6ioSK1vRRB8VEH8AQr67INabKsoKrQqLaj4IAji9UVbS6+g2FbrpdNpazvTSWZiJplMJic5Jzlr+ZDUDfthf+y1vm997P3RwtKSgggqRABAIAUUg6XAEFYanAAws6qoQgnQIQgooEIgFQIBPGxCIEBVFMzEUAVUiazCACCV4UUFQEM+BUEHyHUtSgSRkIiIQNDrFQBARCRy+Icfu91AVVWFmQFSEcexDz78SDIZE0SIRKGWSGrVamO5LjRg0cHATEQAESuIVAQKDKyBQgl0XRENeInIGHP+7z+PHjsWcWx1sWqN9f1uLJ4Mgm6hULh05cr2x3ZMbpxyiNSAFqq1Tz7+tFJrDvUDBB00I2OXaisinHA4l02Jyv+jX9/QoU4FcdjHcisg6Do3ZkhF+qqqICYYa7oh/XRmbt8rz98yNSVQS9yfKCWnJuN+J4zGTDoRbbR8YqeYdc7N1DIJE3Ta8VS65Mby+WjLUyIt5uILjbYRJz3Cvb52Oj1mU1iXPHTi8mgmZZj7ve6j92+s1TtBGCSjNjfiNLzQ68f+vtY+c/bcLVObSIQ5tG4yev63v/Z98OWRQ6cgrT27P3rt1bcp7LhxnTl3etNNpeXy1fyorrUqb+z58L33D45lowf2f/bmOwdby7WrF2b2H/jm+NGTN46lvNWlvtfoefVuq150nSM/Hd134OtauTxRTHRajdM/n3l824Zjp872Ax8KFhJlwBjrWGaybJJpd8RdB4gibK6t9hH6/Z4KWYqOZHKJpEs2Ek+mM9l1zBYgJmM4Ymyk0/G9TrfXC3y/ryQMMIwQK9mV1V4ul75ry9S5y9XlRhMg8/LLL/3y65lVP5opjY+MjgWIRdzSholJclJz5RV3/cag6yfdsXqr2zGZRL60YWIy5LjERnPFG+Ak1/qxRLYwks11+6a2Cmdk1CTSGkkGZNtwM4WiiaWCgOYrbRtNayRx5GwlHw22TN9mVe2luebnRy4qqYoahsAQ4asT//TXaibmbi6mLy6udL0WJ7Jgy8JfHL6iUFVRyOB5M7Fz+Grba0Uikc2T47+fn40digs5qgBk+7bSzOw/Knbq5qYPZ/byFetYe37mj0Zzdef2eyEiEkJEmI0xxrHN6vz4xNTi1dnpu6arlXI6mxdVM/jCAIEVCMOQLBvHWObmSiMdS3S8tTH31szmAxsxhokpFaGVZqO10i4V886p07N/9WYvXLCl4vjOHQ9Va8t733pXwlDCfigiIgKORSyncmHPJxv5tzL/zFNPfPvd94adYVYwAXr3ndNe1788V07GIrNzlYybJYhjiLXf9nxAlGCIrRMLVb1W9fknH7j9junR3ChdW1wC0Ov1nnv26eV6ffOmzVBdWlqqVCq79+7NjxVEiYgZVCjkTh4/LiKDFFVVAu65717f9z2vk8uNNptNVQI0kYgvlssvvvDC+Pj42Pr1nY538dKlO7dufX3XLmYGkYJovrI4sK6+XPPa3uTkTUTUqDfq9XpxvDR0lYySMjOBoEpECqgKFINUIQz9V4LKIHXD8sK1fD6fSqWDoDc/P+9mMm4mo4Ny1f8APx55cp43CXwAAAAASUVORK5CYII="
 ICON_CITYJET_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAKCAIAAABJ+IsHAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQofMFIV2M0AAAOYSURBVDjLPZPNa5xVFMafc+9N3pl3ZvIxkyYZaUwkmBqbaEPQoSCE6qIW9F/wCyFZ2IWI6M6FIqIgCmJdtEWoCwUX1WJBXKlNmyYWa5MZUz9C0jZkmsw7SeZ73nnvOS7eiXdxl+c5vx/Poc372yxc2Cn0JpNKK600IC2/WSwUcitZz/Nmnj4hLE4kUvA8ZgFAAIiICJB0etB13e2dnXq9DhEBCCAiEBmt792563meMeaxqalUMqWNIVA4wFTK5Vxueen6UiaTcaJRRcr3/YVr84meRKNW70sdurG0VCqVtFL3t7cBsLAIAAEIwv0D6ZHhoT9zud1iEaQFgQAAkcCYTqXJGBOLxcnyyvIfL73yau+hfoEAoI8/+XRi8ujw0JClgFgTtVk0gQFmMHGbUhA+IogAgAjbpq3bJomChgI5jqOM7rDsrf3bEemsR+J+o1mt1Lp6u1MiF7+/9MIbrxMUEZmg1ZJK/covV7xi2yQAIQjz5PiRkeHhBtSBQ4GEpGGqgBE0Ku+9/8HjE2OlvUrN9+fm5uYXritSdnfvwYcON4jeefdDJxp9/rlTp549OX1s8nY298jRCQCGgNULX67s7q9rl8WGyQKCtKq/XlsdSP0TcduJRCEnWESECB2BnVHQ5WpfX5/RlJ+/cfWzzy+srjrRmDaYuZU8efzJj15+kZXSMbfbsgyPfPPV16MPj3U6jgFEbdyecM2QckVs26ZAMQZ361uFOxvdh1sUypY2a/sTVas809mUAFqJUuQ2asn15aeiHVBNAwzurNuLf6UEPmlf093Lyfj4keP9/cViMZ1OGxGJxZxxJ2AqK9EUYgmELcXYrQlvrbFSECL8vxUAKE3E1jwQrxSqwiTMDvHYQPxRa/0WCwtA2moWcRR1KNOyRf33bzf35bvNrTffetsI8FO+knXdaqnSJBERAjREC8UcY8lYELMoEaaDdoEUwTZbStOPm+WmcawESmPND77dKLUavNuot4QJINIAopBE1DHglmr8XK6deKJLG9ByNrtwdV5EvjhzRmljrRXhIAhE8Nrp07V6LQhsu3BtZAKgQNK+KhGRRCIeBLZaqxptjNbnz58DELZXaZ1IJGZnZ32/efbsOc/zLv1w2e1K0L18PpyYy2ZLe/vT09MsvL6+kc9vZTIZJxIBaWY+SAyvCSAQKBQaNlwOtmpWa7du/j46OppMJhuNxuLiYk9Pz7GpKVLKWqu1Mdow8B9Ore+f+YBpFgAAAABJRU5ErkJggg=="
-ICON_TALENT_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoeLF8PtcMAAAQgSURBVDjLbZRfiNRVFMe/59z7m/8zruu0uq5haflnBd01fYpK7UUNomAlKBBE7UUCo+deih4LeijE1x4iQ4OoEOohkDIjTcUFsXV13dl1dmZ3Zmd2/v5+957Tw+yqRPfl3nMu93PO98D90sxcCQAAJZDif5c+eXwU0MoFQQHS5QyRqhLACiUIABARzMoz6W22h1MiBYge8x9hlQBVBVghKgBouQpBlYhUn2iOQOB6bZGYJiYmFmu1gYGB4eEdRPIfMRZQQMN2W51f1gEApOCevkdYZpw/f/727dsioqLEZG2wa+fIodcOqyqAmULh4sWLbMz9uxNxY5PxuBKcdztGRl5/481EIqGqjwsUinMPCzNn3zu1p1hScqoIwZs/eN9u3S4kJEQqyoZYiBhKgTEQFRFVVVW27BWW2LLxJFBYkZtff9P69feAjZBE1rbUTeX7D5w88cqrB+IcF6j2Rl1eqKBUygdBTKyFABSfrwzuG+wSkYoSQaGsJMTA9et/d1ptEUkmk99duNDqdJRJnbfGpLI5Fem0GmG1HstnW8WSeJ8jrIt8rtP5/uNPig9m3jl2jJgIZEFQuCsumqUgnkjKUjVgY37+JVuY8So2CAgIOx0BsbFht7NhaP2tW7fGxsbGx8fnFxYazU4ynV2sllXc4IZN3U57qVLODaxHIv6wuqDgWjw5rZowwbZO6865c19Bjh4/riALJSi5XK7eP5BMpacmO9bYfDpz7+Z4o1bqf/o5lWh+tpBd/VRuVV9pdnp1X8573+32ARhjstlMPJE01A9IYMgbTmfTQdiipVquGQoDYM9Esfhsfu36+YXL5759af/+ZzZttiBSQtx57TS7otTtqvEmDEkkArcaNYhGYeiiKHIhMYEZRCB470++e3Lb8DAzA2BmFRERL757Z+Luhx+lgkSDyLddm7xrL96nate5dUt07Y/Lm57faqEw4BGVfY2WoSbSCa8aFh/m335r48HDkWEA8KIAFEK4f29y7MiRaqUyMjo6MTmpTB6qquSUmMHGMOc3bigPDtip6Qiy2gSk5IFnYdSQM/jpzNndL+yxgJC4pcjNOamrEwWpEvPdH360O3dl1w4450Q8g5hI1FQqVUNcni/HYrFKpTJXKolIo9FIJdNhGKZSKUvcqFf/WdPXvjfVgiTgWNVBOZNOpnOqrm/3aGrVKioUi43m0m+XLlUX5s988WUmk82k08TUqNUjpVOnT9vAEpFCSaGq3ouqN8YAIOLenKX3vUSMsYG1S/Xa5599mstmkomU865WqzWbrYOHDpWLc5HvHj124sWX91GhOMcKAbzKX39eyefXDA0NRVF048aNIIiN7t1rjenRIapQD132NV0xq8eGt+JA4q9dvRpPJLZs2eK9n34w3Q3D4e3bnXPiPZhT6cy/1/pbXEKBNC4AAAAASUVORK5CYII="
+ICON_TALENT_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQoeLF8PtcMAAAQgSURBVDjLbZRfiNRVFMe/59z7m/8zruu0uq5haflnBd01fYpK7UUNomAlKBBE7UUCo+deih4LeijE1x4iQ4OoEOohkDIjTcUFsXV13dl1dmZ3Zmd2/v5+957Tw+yqRPfl3nMu93PO98D90sxcCQAAJZDif5c+eXwU0MoFQQHS5QyRqhLACiUIABARzMoz6W22h1MiBYge8x9hlQBVBVghKgBouQpBlYhUn2iOQOB6bZGYJiYmFmu1gYGB4eEdRPIfMRZQQMN2W51f1gEApOCevkdYZpw/f/727dsioqLEZG2wa+fIodcOqyqAmULh4sWLbMz9uxNxY5PxuBKcdztGRl5/481EIqGqjwsUinMPCzNn3zu1p1hScqoIwZs/eN9u3S4kJEQqyoZYiBhKgTEQFRFVVVW27BWW2LLxJFBYkZtff9P69feAjZBE1rbUTeX7D5w88cqrB+IcF6j2Rl1eqKBUygdBTKyFABSfrwzuG+wSkYoSQaGsJMTA9et/d1ptEUkmk99duNDqdJRJnbfGpLI5Fem0GmG1HstnW8WSeJ8jrIt8rtP5/uNPig9m3jl2jJgIZEFQuCsumqUgnkjKUjVgY37+JVuY8So2CAgIOx0BsbFht7NhaP2tW7fGxsbGx8fnFxYazU4ynV2sllXc4IZN3U57qVLODaxHIv6wuqDgWjw5rZowwbZO6865c19Bjh4/riALJSi5XK7eP5BMpacmO9bYfDpz7+Z4o1bqf/o5lWh+tpBd/VRuVV9pdnp1X8573+12ARhjstlMPJE01A9IYMgbTmfTQdiipVquGQoDYM9Esfhsfu36+YXL5759af/+ZzZttiBSQtx57TS7otTtqvEmDEkkArcaNYhGYeiiKHIhMYEZRCB470++e3Lb8DAzA2BmFRERL757Z+Luhx+lgkSDyLddm7xrL96nate5dUt07Y/Lm57faqEw4BGVfY2WoSbSCa8aFh/m335r48HDkWEA8KIAFEK4f29y7MiRaqUyMjo6MTmpTB6qquSUmMHGMOc3bigPDtip6Qiy2gSk5IFnYdSQM/jpzNndL+yxgJC4pcjNOamrEwWpEvPdH360O3dl1w4450Q8g5hI1FQqVUNcni/HYrFKpTJXKolIo9FIJdNhGKZSKUvcqFf/WdPXvjfVgiTgWNVBOZNOpnOqrm/3aGrVKioUi43m0m+XLlUX5s988WUmk82k08TUqNUjpVOnT9vAEpFCSaGq3ouqN8YAIOLenKX3vUSMsYG1S/Xa5599mstmkomU865WqzWbrYOHDpWLc5HvHj124sWX91GhOMcKAbzKX39eyefXDA0NRVF048aNIIiN7t1rjenRIapQD132NV0xq8eGt+JA4q9dvRpPJLZs2eK9n34w3Q3D4e3bnXPiPZhT6cy/1/pbXEKBNC4AAAAASUVORK5CYII="
 ICON_KISS_B64 = "data:image/png;base64,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"
 
 
@@ -56,12 +61,12 @@ STATION_MARKERS = [
     {"name": "Stephansplatz", "lat": 48.2082, "lon": 16.3738, "lines": ["U1", "U3"], "rbl": [4200, 4206]},
     {"name": "Westbahnhof", "lat": 48.1960, "lon": 16.3350, "lines": ["U3", "U6", "5", "6", "18", "52", "60", "S50"], "rbl": [4920, 4921, 4600, 350, 354]}, 
     {"name": "Schottentor", "lat": 48.2150, "lon": 16.3610, "lines": ["U2", "1", "D", "37", "38", "40", "41", "42", "43", "44", "71"], "rbl": [4209, 4211, 4001, 4002]}, 
-    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "lines": ["U3", "U4", "O", "74A", "S"], "rbl": [4204, 4213, 107, 108]}, # Wien Mitte RBLs (Beispielhaft)
+    {"name": "Landstraße", "lat": 48.2060, "lon": 16.3850, "lines": ["U3", "U4", "O", "74A", "S"], "rbl": [4204, 4213, 107, 108]},
     {"name": "Praterstern", "lat": 48.2180, "lon": 16.3900, "lines": ["U1", "U2", "5", "O", "80A", "82A", "S"], "rbl": [4207, 4105, 127, 128]},
     {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "lines": ["U3", "13A", "14A"], "rbl": [267, 266]},
     {"name": "Pilgramgasse (13A)", "lat": 48.1930, "lon": 16.3550, "lines": ["U4", "13A", "14A"], "rbl": [272, 273]},
     {"name": "Alser Straße (43)", "lat": 48.2170, "lon": 16.3420, "lines": ["U6", "43", "44"], "rbl": [4219, 4220, 100, 101]},
-    {"name": "Hauptbahnhof", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18", "S"], "rbl": [4111, 4112, 150, 151, 160, 161, 301, 302]} # Erweiterte RBLs für Hbf/S-Bahn/Tram
+    {"name": "Hauptbahnhof", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18", "S"], "rbl": [4111, 4112, 150, 151, 160, 161, 301, 302]} 
 ]
 
 RAW_ROUTES = {
@@ -141,8 +146,8 @@ def get_vehicle_position_and_rotation(line_name, minutes_away):
 def fetch_data(rbl_list):
     if not rbl_list: return []
     
-    # Chunk RBLs to avoid too long URLs if many stations are active
-    chunk_size = 20
+    # Chunking um URL Limit nicht zu sprengen
+    chunk_size = 15
     chunks = [rbl_list[i:i + chunk_size] for i in range(0, len(rbl_list), chunk_size)]
     
     all_vehicles = []
@@ -160,10 +165,9 @@ def fetch_data(rbl_list):
                     direction = line.get("towards")
                     
                     for i, dep in enumerate(line.get("departures", {}).get("departure", [])):
-                        if i >= 6: break # Max 6 deps per line
+                        if i >= 6: break 
                         countdown = dep.get("departureTime", {}).get("countdown", 99)
                         
-                        # Filter: Nur Fahrzeuge unter 60min anzeigen
                         if isinstance(countdown, int) and countdown < 60:
                             vh = dep.get("vehicle", {})
                             v_id = vh.get("id")
@@ -172,7 +176,6 @@ def fetch_data(rbl_list):
                             v_type = "tram_old" 
                             ac = vh.get("barrierFree", False) or vh.get("foldingRamp", False)
                             
-                            # Typen Logik
                             if line_name == "U6":
                                 v_type = "u6"
                             elif "U" in line_name:
@@ -182,17 +185,17 @@ def fetch_data(rbl_list):
                                 v_type = "bus"
                             elif line_name == "WLB":
                                 v_type = "wlb"
-                            elif line_name.startswith("S") or line_name.startswith("R") or "CJX" in line_name:
-                                # ÖBB Logik
-                                if random.random() > 0.5: v_type = "cityjet"
-                                else: v_type = "talent"
+                            elif line_name.startswith("S") or line_name.startswith("R") or "CJX" in line_name or "REX" in line_name:
+                                # ÖBB Zufalls-Typ für Visualisierung
+                                rnd = random.random()
+                                if rnd < 0.4: v_type = "cityjet"
+                                elif rnd < 0.8: v_type = "talent"
+                                else: v_type = "kiss"
                             elif ac:
                                 if line_name in ["D", "1", "6", "11", "18", "71"]:
                                     v_type = "flexity"
                                 else:
                                     v_type = "ulf"
-                            
-                            entry_id = f"{v_id}_{countdown}" # Unique per time slot
                             
                             if v_id not in unique_ids:
                                 all_vehicles.append({
@@ -240,7 +243,6 @@ with st.sidebar:
         else:
             user_lat, user_lon = 48.2050, 16.3650
     else:
-        # Fallback falls GPS aktiv aber noch nicht gefunden
         if st.session_state.gps_lat:
             user_lat, user_lon = st.session_state.gps_lat, st.session_state.gps_lon
         else:
@@ -249,12 +251,12 @@ with st.sidebar:
     if st.button("Aktualisieren"):
         st.rerun()
 
-# --- 7. FILTERUNG & DATENLADEN ---
+# --- 7. FILTERUNG ---
 
 relevant_rbls = []
 visible_lines = set()
 
-# Suche ALLE Stationen im Umkreis von 1500m
+# Suche ALLE Stationen im Umkreis von 1500m (GPS oder Sim)
 for s in STATION_MARKERS:
     dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
     if dist < 1500: 
@@ -262,7 +264,6 @@ for s in STATION_MARKERS:
         for l in s.get("lines", []):
             visible_lines.add(l)
 
-# Daten abrufen
 vehicles = fetch_data(relevant_rbls)
 vehicles.sort(key=lambda x: x["time"])
 
@@ -288,7 +289,6 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
-# Draw Strecken (Polylines)
 for line_name in visible_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -298,14 +298,12 @@ for line_name in visible_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
-# Draw Stations
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(visible_lines):
         icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
         folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Helper Icons
 def get_icon_props(v):
     if v["type"] == "bus": return ICON_BUS_NORMAL_B64, 30, 8
     if v["type"] == "ulf": return ICON_ULF_B64, 30, 6
@@ -346,7 +344,7 @@ if not gps_mode and map_data:
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. NEXT AC TILES (GRID FIXED) ---
+# --- 9. KACHELN (GRID FIXED) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
@@ -360,90 +358,33 @@ if vehicles:
                 line_data[v["line"]][dest] = time
 
     if line_data:
-        # PURE CSS GRID - Clean String Construction
-        # Defines a robust grid that wraps items automatically
-        grid_css = """
-        <style>
-            .ac-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
-                gap: 12px;
-                margin-bottom: 20px;
-            }
-            .ac-card {
-                aspect-ratio: 1 / 1;
-                border-radius: 8px;
-                color: white;
-                padding: 6px;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                font-family: sans-serif;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            }
-            .ac-header {
-                text-align: center; 
-                font-weight: bold; 
-                font-size: 1.1em; 
-                border-bottom: 1px solid rgba(255,255,255,0.4); 
-                padding-bottom: 3px;
-                margin-bottom: 3px;
-            }
-            .ac-content {
-                flex-grow: 1; 
-                overflow: hidden;
-                font-size: 0.75em;
-            }
-            .ac-row {
-                display: flex; 
-                justify-content: space-between; 
-                margin-bottom: 2px;
-            }
-            .ac-dest {
-                white-space: nowrap; 
-                overflow: hidden; 
-                text-overflow: ellipsis; 
-                max-width: 65%;
-            }
-            .ac-footer {
-                text-align: center; 
-                font-size: 0.65em; 
-                margin-top: 3px; 
-                opacity: 0.9;
-            }
-        </style>
-        """
+        # HIER DER FIX: Keine Einrückung im HTML String!
+        html_content = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px;">'
         
-        # Build Grid Items
-        items_html = ""
         for line, dests in line_data.items():
             bg = LINE_COLORS.get(line, "#555")
             
-            dests_rows = ""
+            dests_html = ""
             for dest_name, min_time in dests.items():
-                dests_rows += f"""
-                <div class="ac-row">
-                    <span class="ac-dest">{dest_name}</span>
-                    <span style="font-weight: bold;">{min_time}m</span>
-                </div>
-                """
+                dests_html += f'<div style="display:flex;justify-content:space-between;font-size:0.75em;margin-bottom:2px;"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;">{dest_name}</span><span style="font-weight:bold;">{min_time}m</span></div>'
             
-            items_html += f"""
-            <div class="ac-card" style="background-color: {bg};">
-                <div class="ac-header">{line}</div>
-                <div class="ac-content">{dests_rows}</div>
-                <div class="ac-footer">❄️ Klima</div>
+            html_content += f"""
+            <div style="background-color:{bg}; aspect-ratio:1/1; border-radius:8px; padding:5px; color:white; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
+                <div style="text-align:center; font-weight:bold; font-size:1.1em; border-bottom:1px solid rgba(255,255,255,0.4); padding-bottom:2px;">{line}</div>
+                <div style="flex-grow:1; overflow:hidden;">{dests_html}</div>
+                <div style="text-align:center; font-size:0.6em; opacity:0.9;">❄️ AC</div>
             </div>
             """
         
-        st.markdown(f"{grid_css}<div class='ac-grid'>{items_html}</div>", unsafe_allow_html=True)
+        html_content += "</div>"
+        st.markdown(html_content, unsafe_allow_html=True)
         
     else:
         st.info("Keine klimatisierten Fahrzeuge in Kürze.")
 else:
     st.write("Keine Linien in der Nähe.")
 
-# --- 10. TABELLE (LIVE) OPTIMIERT ---
+# --- 10. TABELLE ---
 st.subheader("📋 Alle Abfahrten (Live)")
 
 if vehicles:
@@ -462,15 +403,10 @@ if vehicles:
         elif v["type"] == "talent": type_label = "Talent"
         elif v["type"] == "kiss": type_label = "Kiss"
         
-        # ID Formatting
         clean_id = v['id']
-        if "_" in clean_id: # Falls ID generisch ist (zB S-Bahn oder Bus ohne ID)
-             clean_id = "" 
+        if "_" in clean_id: clean_id = "" 
         
-        if clean_id:
-            descr = f"{type_label} ({clean_id})"
-        else:
-            descr = type_label
+        descr = f"{type_label} ({clean_id})" if clean_id else type_label
         
         t_data.append({
             "Icon": icon_url, 
