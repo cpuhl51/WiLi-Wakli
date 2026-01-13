@@ -7,7 +7,7 @@ import pandas as pd
 import random
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V33", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V34", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
@@ -25,19 +25,42 @@ try:
 except ImportError:
     HAS_GPS_MODULE = False
 
+# CSS: Erzwingt kleine Bilder in der Tabelle und Grid-Layout
 st.markdown("""
     <style>
     .block-container { padding-top: 1rem; }
-    /* Fix für Streamlit Tabellen Bilder */
-    td img {
-        max-height: 40px !important;
-        object-fit: contain;
+    
+    /* Zwingt Bilder in der Tabelle auf max 30px Höhe */
+    div[data-testid="stDataFrame"] div[data-testid="stImage"] > img {
+        height: 30px !important;
+        width: auto !important;
+        object-fit: contain !important;
+        max-width: 50px !important;
+    }
+    
+    /* Grid Styling Klassen für die Kacheln */
+    .ac-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .ac-tile {
+        aspect-ratio: 1 / 1;
+        border-radius: 8px;
+        padding: 5px;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        font-family: sans-serif;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- 2. GRAFIKEN (BASE64) ---
-
+# (Icons unverändert)
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 ICON_SILBERPFEIL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkSBMRJ7GwAAAQiSURBVDjLdVTJblxFFD33Vr1u92C/HuI4njseAsRxUAZhUCQ+APMNrMCfYj4hbCNWhF1WIHYJysDCgUQQ29gxiePY3Wm323H3e/2GupdFxwIhcVRSlXRL99Q9qnNor94AoKogAgGqUPw/pL8RMUAAVAVQIgL66x/8qwSA/9PIAgpQvwkpnEuJiIhUFEwAEVTVAAJSBqkCBFUACoBAClXtn1WBU3oF1KUpMzOzE0fvAIAUsP17nZPOy52dOImePPmNiKrV6tFhq5DPT9TOMxuPATAUjkSVoK7PoDilPR0ZgJy+I46izY31gYGBkZGRvdevh/zS+Pj42Oi5sfEpYkN79TdpEn1769aZ6pkkTTJZj5lbzaZziSiyNt9tv+gcNc5WC0ypCGIRb6jm5fwgCJgZ4MHikCgR9/UhhaiKiHQ73b5ig4NDZDgMAsOmF4U3bnw6d+F9C0BFfl17vHBpcffVy/n5uUq5vL7xjKBQnBsdCwPZP0qa3c7UxMTe3q44jNbiTNLe2txyzhHzwqUPX7x4xcb6vh8EQZIkBJmZmdzd3SbiMAynp88P+aXn29sD2awTCcKAoBbQw1azG7wV1a2tnfkLc0613X6byWaOj9sj50aPu9Fe40RVUs5tbh0YtjHn5memWketQr4IliR1a0+eGjaT46OHraNUBKq16clWs1UoDh3sN2Zm3zNephf3enEURdHDhw8WLi9aQLe3d4aHz3qeyeUGmA0RQyFpAhHDVCwWSv4QqQ4WBitln8kUCjknqbUmkzUiYi1Xyr41XskfMsZESSJpkqZpnMRFkmzGWsvMbIwVceWS/9fznThK6NVB486d256JG42wVKr2orBYzP3+9LGLo3zBz2YyY5M1MDExFH3Pqbr6wW4UBUdHrWx2YH5+gWwWRIZEVFWIgF7Y3d/fjXq94mAxX/TzRV/SJInjTEaAdPnzLywzGbKHzWMRjeJemqRQpHHiEonj2HpZAonAQd75gAiAS9NOpxuGkSiDiEQUcP3f3Xccaxj2Tk5O4jj1MnlSjePEsBHH3W5iWG0Yhre/+/7atathEARBEMfJ25POcfuICaqSzeb29+vWeu12W1WZGYC1NuqFvV5PVZP0TbN5zGSstQCcc8aamdnZjWd/1Bt1FQJ088+dYqFYrVas51Uq5YOD+vr6Bu0dNN7UD9bW1uqNOoBKpfz16iqUFY6AUqW8/NnyR0tLjx79wkSqcvGDi6urq865paWllZWVw8PDmze/uXx50fM8VVXVQrFw7fr1lS+/EpV8Pq+iA7mB5eXlM8PDcRwz88dLn0xP16gfmf3UJCKo3v/5nl/yp2o1Q3T//oPp2vTs3AVVJQJUiVhVARVVz3p9AUTFOSeqUBVomsQ//fDj4qXF8fEJw3z33t0rV6/45Uo/WYgYwN+Hl2oR8/jiRgAAAABJRU5ErkJggg=="
 ICON_VWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkiICcMPk4AAAPNSURBVDjLbVRLb1tVEP6+c65v7Dzs2Emchx1QeKqpCn0SR7BpNt2g0v4ONgh2XSAkFqyAJfADoGxAtLQShR8AqCA1rUglRNMmrfNwkia+cXLte+6ZYWFTisQsznxnHjpnRvMN65sNBUAAUFUABuwCoHv+4wbIJ67etZv1tJ3/KuL/pBsfdGEU7RPKJ+HaU/rfh59GBBXa+x0BkKIkSTajvdXVFQCgUQUBBcpjYyOjo/n8EI0FwPpm49dffu60D7Nh1lpL0quoqIgQCmi3lF5xIEgRCawFNU1TKFTUGIoIDAEYY62xBHttUACaJM4Y7u+3Oqk7f+GiqgYkf/rxxuvzcx0FyCiKWvv7JDudTj6fL5fLziUgrbXWBqqq3i8tLZFMEmesmT1yJMhkSMaHcbavT1UFUm/U48M4m8167/v7+4eGBm8tLkJ1rjb33ZeX3zz/ljEmAASKTz7+dGSyehjHB7s782/UxsuTv9+8WZ2u/Hbrj3yhBKOb9bXxiYoXeby9XjtxIrXsU2por350pTRZNdbuNDaKpTGn6LSi8kihWCq9cuzVO7cXtx/vbG9upJ5D+fxYebTZ3I2au8PFEQPQi287l/pUCKUByFSsMSqqquK9T1yaOpcmnSSGS4WgaiKp8eJd0onjpNNOnRMRwpOgwABxfCjeUzUITCbMANo6aL384kt//blMWq5tNj784P3jwoEAmSDYVTXOJ2Fo9qIkl5nIZAVKBQ2NNTDGMlhu7gwo48Q5kalSKSOS6bPZIOuhXtMkTVeb0aBH0h8WhFHiioO5dttFLimXig2VDdr3Ll0KVFWAoWNHBvuyAU3S2h/J59cbjenjx+/V64PjE72hpAIQKIH8dmFytNyM9pPU5wuF0BglCEKEIgbav7H+wszM+lbjmUrl3spKXy5nvde4PTxcLEKz9bUMNABZrVST/oEol4Oi5dzyo0cHBwcPk04Y9o2UClAVQHrEUvF+5f6Dhlt3ztGYwvMzbfGp+C7BSBgair+9tdVqHTTqa2H/QFAorNXrNKY0Xk5Tt7m6uhe1WN/c9kn79p1F7/3dpbvXrn5PQ2OM957kXK12+szpLz77HF06iYhIEFhjLEkVLU+Mn6m99vVXlwkGmeDChYuZMHPlm2+99y5xLnXGmunp6bm5WtxuDwwNbm1tPbz/4O133wkADcLw5KnTIJ6dee5Rvb6wcLZULIro9evXzp07d/To0ampKRElewuEht6LqAIIw7BSqSycXbDWqmoum4vjePne8qmTpyrVKogbN36Yn5+fnZ1NvVdRAMPDw7Dmb2pFJgVZhojuAAAAAElFTkSuQmCC"
@@ -66,7 +89,7 @@ STATION_MARKERS = [
     {"name": "Neubaugasse (13A)", "lat": 48.1990, "lon": 16.3450, "lines": ["U3", "13A", "14A"], "rbl": [267, 266]},
     {"name": "Pilgramgasse (13A)", "lat": 48.1930, "lon": 16.3550, "lines": ["U4", "13A", "14A"], "rbl": [272, 273]},
     {"name": "Alser Straße (43)", "lat": 48.2170, "lon": 16.3420, "lines": ["U6", "43", "44"], "rbl": [4219, 4220, 100, 101]},
-    {"name": "Hauptbahnhof", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18", "S"], "rbl": [4111, 4112, 150, 151, 160, 161, 301, 302]} 
+    {"name": "Hauptbahnhof", "lat": 48.1850, "lon": 16.3750, "lines": ["U1", "D", "13A", "69A", "O", "18", "S"], "rbl": [4111, 4112, 150, 151, 160, 161, 301, 302, 110, 111]} # Mehr RBLs für Hbf hinzugefügt
 ]
 
 RAW_ROUTES = {
@@ -146,7 +169,6 @@ def get_vehicle_position_and_rotation(line_name, minutes_away):
 def fetch_data(rbl_list):
     if not rbl_list: return []
     
-    # Chunking um URL Limit nicht zu sprengen
     chunk_size = 15
     chunks = [rbl_list[i:i + chunk_size] for i in range(0, len(rbl_list), chunk_size)]
     
@@ -164,8 +186,9 @@ def fetch_data(rbl_list):
                     line_name = line.get("name")
                     direction = line.get("towards")
                     
+                    # 10 Abfahrten statt nur 6 prüfen für mehr Daten
                     for i, dep in enumerate(line.get("departures", {}).get("departure", [])):
-                        if i >= 6: break 
+                        if i >= 10: break 
                         countdown = dep.get("departureTime", {}).get("countdown", 99)
                         
                         if isinstance(countdown, int) and countdown < 60:
@@ -186,7 +209,6 @@ def fetch_data(rbl_list):
                             elif line_name == "WLB":
                                 v_type = "wlb"
                             elif line_name.startswith("S") or line_name.startswith("R") or "CJX" in line_name or "REX" in line_name:
-                                # ÖBB Zufalls-Typ für Visualisierung
                                 rnd = random.random()
                                 if rnd < 0.4: v_type = "cityjet"
                                 elif rnd < 0.8: v_type = "talent"
@@ -256,10 +278,10 @@ with st.sidebar:
 relevant_rbls = []
 visible_lines = set()
 
-# Suche ALLE Stationen im Umkreis von 1500m (GPS oder Sim)
+# Suche ALLE Stationen im erweiterten Umkreis von 2000m
 for s in STATION_MARKERS:
     dist = haversine(user_lat, user_lon, s["lat"], s["lon"])
-    if dist < 1500: 
+    if dist < 2000: 
         relevant_rbls.extend(s["rbl"])
         for l in s.get("lines", []):
             visible_lines.add(l)
@@ -344,7 +366,7 @@ if not gps_mode and map_data:
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. KACHELN (GRID FIXED) ---
+# --- 9. KACHELN (HTML FIX: EINE ZEILE) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
@@ -358,26 +380,19 @@ if vehicles:
                 line_data[v["line"]][dest] = time
 
     if line_data:
-        # HIER DER FIX: Keine Einrückung im HTML String!
-        html_content = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px;">'
-        
+        # Konstruktion als Einzeiler String für sicheres Rendering
+        grid_items_str = ""
         for line, dests in line_data.items():
             bg = LINE_COLORS.get(line, "#555")
             
-            dests_html = ""
+            dests_str = ""
             for dest_name, min_time in dests.items():
-                dests_html += f'<div style="display:flex;justify-content:space-between;font-size:0.75em;margin-bottom:2px;"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;">{dest_name}</span><span style="font-weight:bold;">{min_time}m</span></div>'
+                dests_str += f'<div style="display:flex;justify-content:space-between;font-size:0.75em;margin-bottom:2px;"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;">{dest_name}</span><span style="font-weight:bold;">{min_time}m</span></div>'
             
-            html_content += f"""
-            <div style="background-color:{bg}; aspect-ratio:1/1; border-radius:8px; padding:5px; color:white; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 2px 5px rgba(0,0,0,0.2);">
-                <div style="text-align:center; font-weight:bold; font-size:1.1em; border-bottom:1px solid rgba(255,255,255,0.4); padding-bottom:2px;">{line}</div>
-                <div style="flex-grow:1; overflow:hidden;">{dests_html}</div>
-                <div style="text-align:center; font-size:0.6em; opacity:0.9;">❄️ AC</div>
-            </div>
-            """
+            grid_items_str += f'<div class="ac-tile" style="background-color:{bg};"><div style="text-align:center;font-weight:bold;font-size:1.1em;border-bottom:1px solid rgba(255,255,255,0.4);padding-bottom:2px;">{line}</div><div style="flex-grow:1;overflow:hidden;">{dests_str}</div><div style="text-align:center;font-size:0.6em;opacity:0.9;">❄️ AC</div></div>'
         
-        html_content += "</div>"
-        st.markdown(html_content, unsafe_allow_html=True)
+        full_html = f'<div class="ac-grid">{grid_items_str}</div>'
+        st.markdown(full_html, unsafe_allow_html=True)
         
     else:
         st.info("Keine klimatisierten Fahrzeuge in Kürze.")
