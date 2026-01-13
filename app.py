@@ -6,13 +6,17 @@ import math
 import pandas as pd
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V27", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V28", layout="wide", page_icon="🚋")
 
 # State Initialisierung
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 16
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [48.2082, 16.3738]
+if 'gps_lat' not in st.session_state:
+    st.session_state.gps_lat = None
+if 'gps_lon' not in st.session_state:
+    st.session_state.gps_lon = None
 
 try:
     from streamlit_js_eval import get_geolocation
@@ -30,13 +34,13 @@ st.markdown("""
 
 ICON_STATION_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAMCAIAAADtbgqsAAAAB3RJTUUH6gELByIjkfAdIgAAAoxJREFUeJxNzstrlGcYhvH7eQ8z3xwSJ4MxaWszJhiQduER3Fh0EWxr0ZIuohQhbVHU1iOIq2BQQjyQorVd1O5SaEUqQWuxbTAgSAOCqAhRkC4SjSaS4/jNTOY7vM/TRUH8cf0BF/i1IHAiXK74J3qnG1um8kun6gvTLe9PL26aqmmYXfdBdegWi7wZMTNE4BysdaNj5T0Hw8GbKp+HAGnPbt0S9P9i1q7O9PWqpnfF94mIjOViEdkscRjBGgDh9Rulw8fkxSTlc8QilSq981a6p6u06wAtqkUcY2EB1kApnpnRrcszF783sEaKxfKZvurZC5RIIJNmv0TWcmne1K0wq1YhlXTPx5WXEgBBIKVyoqM9+12famww8YOHlW8vRH/e0M3LnHCSAFJQytWlbcdnurlgt7fLwO8qnQGzOOcd2Jc8+DUAABSPP5cgkHRGEbTVEy/nQCTC2iYalheEWURe/jsGZgBQWhWWUjUQ4YVqRCwSAxYIgZMX/7h0fRgJA4JdCL/Z2bb/87au879dHrwrXhIswkwuZlBpzt/RvsFw7KzRzyamd3f3/33rPjLe/0colvqv/vPRppU/DtyenZpHyoNzsAbVAILj+7Yd/fJjo7W+MnRvT8/Psy9mka8FC5xLpj2kkpOvyvcePy1GjnI1pEhpFc/5rU0NP3R3bl7/HgATxHGhse7auf2ZjOdixyKLsqlHo5NHTl+amPf/Gh5xUYyEltCxX/mkbc1P3V+8XZ8Lo9gYTc6xUoQ3DN15dOjUryOjkyqdrMumZoplEGqVOrxzc9ferVapMHLWKADEzLFjEXHMWqkHT55t/OpsGLnaJTmO4sixlzAVv3K088OevZ+GUUwEozUAIvoPOtpWT2fW07IAAAAASUVORK5CYII="
 
-# Silberpfeil (Type U)
+# Silberpfeil
 ICON_SILBERPFEIL_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAMCAIAAACfoWgaAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkSBMRJ7GwAAAQiSURBVDjLdVTJblxFFD33Vr1u92C/HuI4njseAsRxUAZhUCQ+APMNrMCfYj4hbCNWhF1WIHYJysDCgUQQ29gxiePY3Wm323H3e/2GupdFxwIhcVRSlXRL99Q9qnNor94AoKogAgGqUPw/pL8RMUAAVAVQIgL66x/8qwSA/9PIAgpQvwkpnEuJiIhUFEwAEVTVAAJSBqkCBFUACoBAClXtn1WBU3oF1KUpMzOzE0fvAIAUsP17nZPOy52dOImePPmNiKrV6tFhq5DPT9TOMxuPATAUjkSVoK7PoDilPR0ZgJy+I46izY31gYGBkZGRvdevh/zS+Pj42Oi5sfEpYkN79TdpEn1769aZ6pkkTTJZj5lbzaZziSiyNt9tv+gcNc5WC0ypCGIRb6jm5fwgCJgZ4MHikCgR9/UhhaiKiHQ73b5ig4NDZDgMAsOmF4U3bnw6d+F9C0BFfl17vHBpcffVy/n5uUq5vL7xjKBQnBsdCwPZP0qa3c7UxMTe3q44jNbiTNLe2txyzhHzwqUPX7x4xcb6vh8EQZIkBJmZmdzd3SbiMAynp88P+aXn29sD2awTCcKAoBbQw1azG7wV1a2tnfkLc0613X6byWaOj9sj50aPu9Fe40RVUs5tbh0YtjHn5memWketQr4IliR1a0+eGjaT46OHraNUBKq16clWs1UoDh3sN2Zm3zNephf3enEURdHDhw8WLi9aQLe3d4aHz3qeyeUGmA0RQyFpAhHDVCwWSv4QqQ4WBitln8kUCjknqbUmkzUiYi1Xyr41XskfMsZESSJpkqZpnMRFkmzGWsvMbIwVceWS/9fznThK6NVB486d256JG42wVKr2orBYzP3+9LGLo3zBz2YyY5M1MDExFH3Pqbr6wW4UBUdHrWx2YH5+gWwWRIZEVFWIgF7Y3d/fjXq94mAxX/TzRV/SJInjTEaAdPnzLywzGbKHzWMRjeJemqRQpHHiEonj2HpZAonAQd75gAiAS9NOpxuGkSiDiEQUcP3f3Xccaxj2Tk5O4jj1MnlSjePEsBHH3W5iWG0Yhre/+/7atathEARBEMfJ25POcfuICaqSzeb29+vWeu12W1WZGYC1NuqFvV5PVZP0TbN5zGSstQCcc8aamdnZjWd/1Bt1FQJ088+dYqFYrVas51Uq5YOD+vr6Bu0dNN7UD9bW1uqNOoBKpfz16iqUFY6AUqW8/NnyR0tLjx79wkSqcvGDi6urq865paWllZWVw8PDmze/uXx50fM8VVXVQrFw7fr1lS+/EpV8Pq+iA7mB5eXlM8PDcRwz88dLn0xP16gfmf3UJCKo3v/5nl/yp2o1Q3T//oPp2vTs3AVVJQJUiVhVARVVz3p9AUTFOSeqUBVomsQ//fDj4qXF8fEJw3z33t0rV6/45Uo/WYgYwN+Hl2oR8/jiRgAAAABJRU5ErkJggg=="
 
-# V-Wagen (Type V)
+# V-Wagen
 ICON_VWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkiICcMPk4AAAPNSURBVDjLbVRLb1tVEP6+c65v7Dzs2Emchx1QeKqpCn0SR7BpNt2g0v4ONgh2XSAkFqyAJfADoGxAtLQShR8AqCA1rUglRNMmrfNwkia+cXLte+6ZYWFTisQsznxnHjpnRvMN65sNBUAAUFUABuwCoHv+4wbIJ67etZv1tJ3/KuL/pBsfdGEU7RPKJ+HaU/rfh59GBBXa+x0BkKIkSTajvdXVFQCgUQUBBcpjYyOjo/n8EI0FwPpm49dffu60D7Nh1lpL0quoqIgQCmi3lF5xIEgRCawFNU1TKFTUGIoIDAEYY62xBHttUACaJM4Y7u+3Oqk7f+GiqgYkf/rxxuvzcx0FyCiKWvv7JDudTj6fL5fLziUgrbXWBqqq3i8tLZFMEmesmT1yJMhkSMaHcbavT1UFUm/U48M4m8167/v7+4eGBm8tLkJ1rjb33ZeX3zz/ljEmAASKTz7+dGSyehjHB7s782/UxsuTv9+8WZ2u/Hbrj3yhBKOb9bXxiYoXeby9XjtxIrXsU2por350pTRZNdbuNDaKpTGn6LSi8kihWCq9cuzVO7cXtx/vbG9upJ5D+fxYebTZ3I2au8PFEQPQi287l/pUCKUByFSsMSqqquK9T1yaOpcmnSSGS4WgaiKp8eJd0onjpNNOnRMRwpOgwABxfCjeUzUITCbMANo6aL384kt//blMWq5tNj784P3jwoEAmSDYVTXOJ2Fo9qIkl5nIZAVKBQ2NNTDGMlhu7gwo48Q5kalSKSOS6bPZIOuhXtMkTVeb0aBH0h8WhFHiioO5dttFLimXig2VDdr3Ll0KVFWAoWNHBvuyAU3S2h/J59cbjenjx+/V64PjE72hpAIQKIH8dmFytNyM9pPU5wuF0BglCEKEIgbav7H+wszM+lbjmUrl3spKXy5nvde4PTxcLEKz9bUMNABZrVST/oEol4Oi5dzyo0cHBwcPk04Y9o2UClAVQHrEUvF+5f6Dhlt3ztGYwvMzbfGp+C7BSBgair+9tdVqHTTqa2H/QFAorNXrNKY0Xk5Tt7m6uhe1WN/c9kn79p1F7/3dpbvXrn5PQ2OM957kXK12+szpLz77HF06iYhIEFhjLEkVLU+Mn6m99vVXlwkGmeDChYuZMHPlm2+99y5xLnXGmunp6bm5WtxuDwwNbm1tPbz/4O133wkADcLw5KnTIJ6dee5Rvb6wcLZULIro9evXzp07d/To0ampKRElewuEht6LqAIIw7BSqSycXbDWqmoum4vjePne8qmTpyrVKogbN36Yn5+fnZ1NvVdRAMPDw7Dmb2pFJgVZhojuAAAAAElFTkSuQmCC"
 
-# X-Wagen (Type X - U1-U4 Neu - Option)
+# X-Wagen (Neu)
 ICON_XWAGEN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAALCAIAAACCpFiiAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAuIwAALiMBeKU/dgAAAAd0SU1FB+oBDQkvFcQRhCAAAAPfSURBVDjLZVRNb1tVEJ259/q9549nx37NF2nTxG6IaCI+mrAgVdogITYsWEOFEql0TXdE+QvAL2ADCxZs2IBEVbpAoqoERSVxahJo0tLWjnHqOE7wi5/fu3eGhZ0UibO6c2fumTnS3IOV2i4AIHSBAAx4HHXBAMh8csndYu5luq+OT/yc6n9g5v9EioB3yk92yjvIXRLu0XNvHgZgYAbAXm+BvebcK0QU3AsYe3MgAgKeNBMo9ht1Zdvzly4rpQBAsdHffndjx3aJFAgUAKInnDWx6Q6DiPxclUS0pFIIxKzJaGImQgBggWAJZCG0EIgojDGhoSgKwYCvzeOff7SVM3fpIgCoMOisrv52+Z13A8OgEKNoZ+O+MUYp6cRTp0bHAUAgCiG6GpBor/y4tVcHFVNKDp/N2246NIa1aTQPt55Us2l74ky2vFkiokw6oxynb3Dw19s/CaW86Vdv3Px+bv4iICgCs725sVetWK7nxJ16tTwzc0EiNht7Mbt559YPaa/fiqlntb/7h0Yi4la9+sr5l+r7jfGxsX8O97/54vOMNxSLp4J2q+0fWLazG4b3DvdnZmekkM1O24knbt+6abSOjHZf8+6slRqNupfzFCBKJSwbdeD7JjBRhzpBzHKIyELhSAmhCbXRQbt92CQGxQalEADAxGRYh63WQSwKyUSOZcfjKbY16o4SkplBCAGQsCyfNGroqJiVn6xUyqcGhnD7r+3lq9fen31dhxEZaoZRO+oc6ehMtv+g4w+nXQqNYcPEiMAMUoinR36/sitBO23ZiNyHEpXA7tpKBUChoVakI62HMtnKYWPASe7rkEDEZ+c2OHbBlW+/Na+YUORy0cvTAlECWC0/oaTj+7mR041HD83wMCLGEBEkAzMzkcan5eTI6WS1mhvo18Yk0q4h6uaYARBkO3C18Y/8zOjZ2oMHlMlYYZs1DnYau9vlYHqKNCvLtguTk79vbaFAIWUYhn9u/sFEUoh0tu8g7BAREQEdfw3kWrV6r3SfiVFg/lxBqpghAgYppVSSiMIgKK2va62llIlEauLFiTDoZDJu9oUhSu99/dWXC/NvKKliVz+81m77UohisbiysiIAUynXGIOIH5ybfHNh4ePl5UajAcy2Y0uplpaW8oX8Z598+qxeL5U2bNtOp93zU1N3f7m7uLjoplIfXb/uplLJZJKZW62Wm0rZcbtWq1Zqu48fPnrvyhURs7G823MuBGai9WIxXyg48XgURWura/lCwfM8AJAIiMjMRNR1ksgYPAGAkDKKNAAYbdbXi+PjY9lsVgixXiyOjo7lPI+IumbS3ZV/AegtHdiMMk7cAAAAAElFTkSuQmCC"
 
 # Type T (U6)
@@ -181,11 +185,10 @@ def fetch_data(lines_to_check):
                         ac = vh.get("barrierFree", False) or vh.get("foldingRamp", False)
                         
                         if line_name == "U6":
-                            v_type = "u6" # Type T
+                            v_type = "u6" # Type T/T1
                         elif "U" in line_name:
-                            # Wir unterscheiden U-Bahn NUR noch nach AC
-                            if ac: v_type = "v_wagen"
-                            else: v_type = "silberpfeil"
+                            if ac: v_type = "v_wagen" # V-Wagen (oder X)
+                            else: v_type = "silberpfeil" # Silberpfeil
                         elif "A" in line_name or "Bus" in line_name:
                             v_type = "bus"
                         elif line_name == "WLB":
@@ -214,34 +217,44 @@ def fetch_data(lines_to_check):
         return list(unique_vehicles.values())
     except: return []
 
-# --- 6. GUI & SIDEBAR ---
+# --- 6. SIDEBAR & GPS ---
 
 with st.sidebar:
     st.header("Einstellungen")
     gps_mode = st.toggle("Echtstandort (GPS)", value=False)
     
-    if st.button("Aktualisieren"):
-        st.rerun()
-
-    user_lat, user_lon = 48.2082, 16.3738
-    
+    # GPS LOGIK
     if gps_mode:
         st.write("📡 Suche GPS...")
         if HAS_GPS_MODULE:
             loc = get_geolocation()
             if loc:
-                user_lat, user_lon = loc['coords']['latitude'], loc['coords']['longitude']
-                st.success(f"GPS: {user_lat:.4f}, {user_lon:.4f}")
+                st.session_state.gps_lat = loc['coords']['latitude']
+                st.session_state.gps_lon = loc['coords']['longitude']
+                st.success(f"GPS: {st.session_state.gps_lat:.4f}, {st.session_state.gps_lon:.4f}")
             else:
-                st.warning("Warte...")
+                st.warning("Warte auf Browser-Freigabe...")
         else:
             st.error("Kein GPS Plugin.")
     else:
+        # Reset GPS wenn ausgeschaltet
+        st.session_state.gps_lat = None
+        st.session_state.gps_lon = None
+
+    if not gps_mode:
         sim_scenario = st.radio("Simulation:", ["Stephansplatz", "Ring/Oper"], index=1)
         if sim_scenario == "Stephansplatz":
             user_lat, user_lon = 48.2082, 16.3738
         else:
             user_lat, user_lon = 48.2050, 16.3650
+    else:
+        if st.session_state.gps_lat:
+            user_lat, user_lon = st.session_state.gps_lat, st.session_state.gps_lon
+        else:
+            user_lat, user_lon = 48.2082, 16.3738 # Fallback
+
+    if st.button("Aktualisieren"):
+        st.rerun()
 
 # --- 7. FILTERUNG ---
 
@@ -257,28 +270,30 @@ vehicles.sort(key=lambda x: x["time"])
 
 # --- 8. KARTE ---
 
-if 'map_center' not in st.session_state:
-    st.session_state.map_center = [user_lat, user_lon]
-if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = 16
-
-if gps_mode and 'last_gps' not in st.session_state:
-    st.session_state.map_center = [user_lat, user_lon]
-    st.session_state.last_gps = True
+# Center Logic: Wenn GPS aktiv, immer zentrieren. Sonst Session State.
+if gps_mode and st.session_state.gps_lat:
+    map_center = [st.session_state.gps_lat, st.session_state.gps_lon]
+elif 'map_center' in st.session_state:
+    map_center = st.session_state.map_center
+else:
+    map_center = [user_lat, user_lon]
 
 m = folium.Map(
-    location=st.session_state.map_center, 
+    location=map_center, 
     zoom_start=st.session_state.map_zoom, 
     tiles="CartoDB positron"
 )
 
+# User Marker (Blau für GPS, Grau für Sim)
+color = "blue" if gps_mode else "gray"
 folium.Marker(
     [user_lat, user_lon],
     tooltip="Du",
-    icon=folium.Icon(color="blue", icon="user", prefix="fa"),
+    icon=folium.Icon(color=color, icon="user", prefix="fa"),
     z_index_offset=1100
 ).add_to(m)
 
+# Linien
 for line_name in nearby_lines:
     route_key = line_name
     if route_key not in SMOOTH_ROUTES:
@@ -288,66 +303,57 @@ for line_name in nearby_lines:
     if route_key in SMOOTH_ROUTES:
         folium.PolyLine(SMOOTH_ROUTES[route_key], color=LINE_COLORS.get(line_name, "#888"), weight=3, opacity=0.5).add_to(m)
 
+# Stationen
 for s in STATION_MARKERS:
     s_lines = set(s.get("lines", []))
     if not s_lines.isdisjoint(nearby_lines):
         icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
         folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Fahrzeuge zeichnen (Icons zuweisen)
-def get_icon_html(v, rot):
-    border_color = "#0066b3" if v["ac"] else "#d32f2f"
-    current_icon = ICON_BIM_OLD_B64
-    w, h = 32, 8
-    
-    if v["type"] == "bus":
-        current_icon = ICON_BUS_B64; w, h = 30, 8
-    elif v["type"] == "ulf":
-        current_icon = ICON_ULF_B64; w, h = 30, 6
-    elif v["type"] == "flexity":
-        current_icon = ICON_FLEXITY_B64; w, h = 40, 9
-    elif v["type"] == "silberpfeil":
-        current_icon = ICON_SILBERPFEIL_B64; w, h = 40, 12
-    elif v["type"] == "v_wagen":
-        current_icon = ICON_VWAGEN_B64; w, h = 40, 12
-    elif v["type"] == "x_wagen": # Optional falls genutzt
-        current_icon = ICON_XWAGEN_B64; w, h = 40, 12
-    elif v["type"] == "u6":
-        current_icon = ICON_TYPET_B64; w, h = 40, 13
-    elif v["type"] == "wlb":
-        current_icon = ICON_WLB_B64; w, h = 40, 13
-        
-    display_rot = rot - 90
-    return f"""
-    <div style="transform: rotate({display_rot}deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 40px;">
-        <img src="{current_icon}" style="width: {w}px; height: {h}px;">
-        <div style="width: {w}px; height: 3px; background: {border_color}; margin-top: 1px; border-radius: 2px;"></div>
-        <div style="transform: rotate({-display_rot}deg); background: rgba(255,255,255,0.8); color: black; font-weight: bold; font-size: 9px; padding: 0 3px; border-radius: 4px; border: 1px solid #ccc;">
-            {v['line']}
-        </div>
-    </div>
-    """
+# Fahrzeug Icons Helper
+def get_icon_props(v):
+    if v["type"] == "bus": return ICON_BUS_B64, 30, 8
+    if v["type"] == "ulf": return ICON_ULF_B64, 30, 6
+    if v["type"] == "flexity": return ICON_FLEXITY_B64, 40, 9
+    if v["type"] == "silberpfeil": return ICON_SILBERPFEIL_B64, 40, 12
+    if v["type"] == "v_wagen": return ICON_VWAGEN_B64, 40, 12
+    if v["type"] == "x_wagen": return ICON_XWAGEN_B64, 40, 12
+    if v["type"] == "u6": return ICON_TYPET_B64, 40, 13
+    if v["type"] == "wlb": return ICON_WLB_B64, 40, 13
+    return ICON_BIM_OLD_B64, 32, 8 # Fallback Tram Old
 
 for v in vehicles:
     lat, lon, rot = get_vehicle_position_and_rotation(v["line"], v["time"])
     if lat and lon:
-        folium.Marker([lat, lon], icon=folium.DivIcon(html=get_icon_html(v, rot), icon_size=(40,40), icon_anchor=(20,20))).add_to(m)
+        border_color = "#0066b3" if v["ac"] else "#d32f2f"
+        icon_b64, w, h = get_icon_props(v)
+        
+        display_rot = rot - 90
+        icon_html = f"""
+        <div style="transform: rotate({display_rot}deg); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 40px; height: 40px;">
+            <img src="{icon_b64}" style="width: {w}px; height: {h}px;">
+            <div style="width: {w}px; height: 3px; background: {border_color}; margin-top: 1px; border-radius: 2px;"></div>
+            <div style="transform: rotate({-display_rot}deg); background: rgba(255,255,255,0.8); color: black; font-weight: bold; font-size: 9px; padding: 0 3px; border-radius: 4px; border: 1px solid #ccc;">
+                {v['line']}
+            </div>
+        </div>
+        """
+        folium.Marker([lat, lon], icon=folium.DivIcon(html=icon_html, icon_size=(40,40), icon_anchor=(20,20))).add_to(m)
 
 map_data = st_folium(m, width="100%", height=500, returned_objects=[])
 
-if map_data:
+# Update State nur wenn GPS nicht aktiv (sonst zittert es)
+if not gps_mode and map_data:
     new_zoom = map_data.get('zoom')
     new_center = map_data.get('center')
     if new_zoom is not None: st.session_state.map_zoom = new_zoom
     if new_center is not None and 'lat' in new_center: st.session_state.map_center = [new_center['lat'], new_center['lng']]
 
-# --- 9. NEXT AC TILES (KOMPAKT & QUADRATISCH) ---
+# --- 9. NEXT AC TILES (QUADRATISCH) ---
 st.subheader("❄️ Nächste klimatisierte Fahrzeuge")
 
 if vehicles:
-    # 1. Daten aggregieren: Linie -> Richtung -> Min(Zeit)
-    line_data = {} # { "U3": { "Ottakring": 3, "Simmering": 5 }, "13A": ... }
-    
+    line_data = {}
     for v in vehicles:
         if v["ac"]:
             if v["line"] not in line_data: line_data[v["line"]] = {}
@@ -362,18 +368,15 @@ if vehicles:
         for line, dests in line_data.items():
             with cols[idx % 4]:
                 bg = LINE_COLORS.get(line, "#555")
-                
-                # HTML für Richtungen bauen
                 dest_html = ""
                 for dest_name, min_time in dests.items():
                     dest_html += f"""
-                    <div style="display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;">
-                        <span style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%; text-align: left;">{dest_name}</span>
-                        <span style="font-weight: bold;">{min_time} min</span>
+                    <div style='display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 2px;'>
+                        <span style='overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 70%; text-align: left;'>{dest_name}</span>
+                        <span style='font-weight: bold;'>{min_time} min</span>
                     </div>
                     """
                 
-                # Quadratische Kachel
                 st.markdown(f"""
                     <div style="
                         background-color: {bg}; 
@@ -381,8 +384,10 @@ if vehicles:
                         padding: 10px; 
                         border-radius: 8px; 
                         margin-bottom: 10px;
-                        height: 140px; /* Fixe Höhe für Quadrat-Look */
+                        width: 100%;
+                        aspect-ratio: 1 / 1; /* Quadratisch erzwingen */
                         display: flex; flex-direction: column; justify-content: flex-start;
+                        overflow: hidden;
                     ">
                         <div style="font-size: 1.5em; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 5px; margin-bottom: 5px;">
                             {line}
@@ -399,32 +404,16 @@ if vehicles:
 else:
     st.write("Keine Linien in der Nähe.")
 
-
-# --- 10. TABELLE (LIVE) MIT ECHTEN ICONS ---
+# --- 10. TABELLE (LIVE) MIT ECHTEN BILDERN ---
 st.subheader("📋 Alle Abfahrten (Live)")
 
 if vehicles:
-    # Hilfsfunktion für Icons in der Tabelle (HTML wäre in st.dataframe schwierig, wir nutzen Text/Emoji Annäherung oder reine Typenbezeichnung)
-    # Da st.dataframe keine Bilder rendert, nutzen wir Unicode-Hacks oder klare Textbezeichnungen
-    # Um es "hübsch" zu machen, nutzen wir pandas styling ist in Streamlit limitiert.
-    # Wir nehmen die Logik von oben und mappen auf Text.
-    
     t_data = []
     for v in vehicles:
-        # Icon Mapping Textuell
-        icon_str = "Straßenbahn"
-        if v["type"] == "flexity": icon_str = "Flexity 🚋"
-        elif v["type"] == "ulf": icon_str = "ULF 🚋"
-        elif v["type"] == "tram_old": icon_str = "Hochflur 🚋"
-        elif v["type"] == "bus": icon_str = "Bus 🚌"
-        elif v["type"] == "v_wagen": icon_str = "V-Wagen 🚇"
-        elif v["type"] == "x_wagen": icon_str = "X-Wagen 🚇"
-        elif v["type"] == "silberpfeil": icon_str = "Silberpfeil 🚇"
-        elif v["type"] == "u6": icon_str = "Type T 🚇"
-        elif v["type"] == "wlb": icon_str = "Badner Bahn 🚆"
+        icon_url, _, _ = get_icon_props(v)
         
         t_data.append({
-            "Typ": icon_str, 
+            "Icon": icon_url, # Base64 String
             "Linie": v["line"], 
             "Ziel": v["dest"], 
             "Zeit": f"{v['time']} min", 
@@ -435,11 +424,5 @@ if vehicles:
     st.dataframe(
         df, 
         column_config={
-            "Typ": st.column_config.TextColumn("Fahrzeugtyp"),
-            "Linie": st.column_config.TextColumn("Linie", width="small"),
-            "Zeit": st.column_config.TextColumn("Abfahrt in", width="small"),
-            "Klima": st.column_config.TextColumn("AC", width="small")
-        },
-        hide_index=True, 
-        use_container_width=True
-    )
+            "Icon": st.column_config.ImageColumn("Typ", width="small"),
+            "Linie": st.column_config.TextColumn("
