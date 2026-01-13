@@ -3,9 +3,10 @@ import folium
 from streamlit_folium import st_folium
 import requests
 import math
+import pandas as pd
 
 # --- 1. SETUP ---
-st.set_page_config(page_title="Wien Öffis V20", layout="wide", page_icon="🚋")
+st.set_page_config(page_title="Wien Öffis V21", layout="wide", page_icon="🚋")
 
 try:
     from streamlit_js_eval import get_geolocation
@@ -30,8 +31,8 @@ ICON_UBAHN_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAICAIAAABh
 # 2. TRAM (Rot/Weiß - E2 Style)
 ICON_TRAM_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAICAYAAAABDm1nAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACYSURBVDhPY/wPBAw4wX98YLCB4T8DGlBmYPzPgA+gq2VAB9A1/EcH6GqR1T5H5/9H5/9H5/9H5w/C+f/R+f/R+f/R+f/R+VjV4nM07z86H6tafI7m/UfnY1WLz9G8/+h8rGrxOZr3H52PVS0+R/P+o/OxqsXnaN5/dD5WtficzfuPzseqFp+jef/R+VjV4nM07z86H6ta5LUPAgMAs0910tWq1ZAAAAAASUVORK5CYII="
 
-# 3. BUS (Rot - Gelenkbus)
-ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAICAYAAADe1u3TAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABtSURBVDhPY/wPBAw4wX98YLCB4T8DGlBmYPzPgA+gq2VAB9A1/EcH6GqR1T5H5/9H5/9H5/9H5w/C+f/R+f/R+f/R+f/R+VjV4nM07z86H6tafI7m/UfnY1WLz9G8/+h8rGrxOZr3H52PVS2y2geBAQD8+2215x45wAAAAABJRU5ErkJggg=="
+# 3. BUS (Neu: Gelenkbus)
+ICON_BUS_B64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAHCAIAAACQi2qmAAAAAXNSR0IB2cksfwAAAARnQU1BAACxjwv8YQUAAAAgY0hSTQAAeiYAAICEAAD6AAAAgOgAAHUwAADqYAAAOpgAABdwnLpRPAAAAAlwSFlzAAAOwwAADsMBx2+oZAAAAAd0SU1FB+oBDQg4Nfs+SkkAAAIMSURBVCjPJc85T1RRGAbg9/vOOffcubM7IgqDCdg4A7GwMBYkdGLsbfwFJvrfwFho4UJBYVxiAHc0hmUGhsWZ4S5zmbt8FvRP81CndyQiAAACkKVJODzLCQKx2ilWqwAAgRBILgwEEPH9YZakBAihVK4oowkCQIQulBaRo2739coKQxRzv3vYWXubCTKI1Gu3H9xnVqZavTw9I4TdjU1AiIgEm6urCEc5icMys7RUnWqmIiAC8d17y7M35jSAUb//5sXLY8lyQZKMueASmBhW6y/Pnhvr1ireteaUa+362rpXqqTJWClF1smMo4y+UnD62z/lz++uH2XMNhr1wuDxk6f64tc0TqhMqoxJxqVyWSk9igOlrbB/qd7QNPa8omtdrzJRn5gYRYHWjtJmHIXGODHTP39oC0Xj6ZJXKli/Nd92rNUAtHXnDvaocfVHrXEzy1rbv2IlB7XG16pp57K8vbXfanWslSx91D89POnVHOfV9VnFeHjcrcWJIQyYB6rXaUx+Po+niequx8waABwji4vnG9/OozBI4nfNxlhx8SSIjRPH0YB4kKY5mBnfs/Tszq2dT1vhsA+l/DhxNBSwPlmLymV3/zQpcSc4IwIRUad3BBGAcslzESba2fk7iuJWe0FyIRKC5CAwCJQmyccP79ut+XKlBFJCooTSPOvs7gVRMN9eyAECiATE/wFeLf0Ld9L4ZwAAAABJRU5ErkJggg=="
 
 
 # --- 3. STATIONEN & ROUTEN ---
@@ -129,7 +130,6 @@ def fetch_data():
     
     url = f"https://www.wienerlinien.at/ogd_realtime/monitor?rbl={'&rbl='.join(map(str, all_rbls))}"
     
-    # Dictionary zur Deduplizierung: Key = VehicleID (oder Line+Dest), Value = Datensatz
     unique_vehicles = {}
 
     try:
@@ -148,26 +148,11 @@ def fetch_data():
                     if isinstance(countdown, int) and countdown < 40:
                         vh = dep.get("vehicle", {})
                         
-                        # 1. Eindeutige ID bestimmen
-                        # Die API liefert oft eine 'id' im vehicle-Objekt. Wenn nicht, bauen wir eine eigene.
                         v_id = vh.get("id")
                         if not v_id:
-                            # Fallback ID: Linie + Richtung + (ungefähre Abfahrtszeit, um verschiedene Busse zu unterscheiden)
-                            # Wir runden den Countdown auf 5-Minuten Blöcke, um Busse weit auseinander zu halten
-                            # ABER: Hier wollen wir ja, dass der gleiche Bus (2 min und 5 min) erkannt wird.
-                            # Bessere Strategie ohne ID: Wir nehmen Linie + Richtung als Key und speichern nur den KLEINSTEN Countdown.
-                            # Das bedeutet aber, wir sehen pro Linie/Richtung nur EINEN Bus. Das ist zu wenig.
-                            # Kompromiss: Wir nehmen an, Busse fahren alle 5 min.
-                            # Also Key = Linie + Richtung + "Block_" + int(countdown / 10)
-                            # Das ist unsicher.
-                            # Sicherer: Einfach Linie + Richtung als Basis.
-                            # Wenn wir schon einen Eintrag für 13A nach Alser Straße haben mit Zeit 2,
-                            # und jetzt kommt einer mit Zeit 5 -> Wahrscheinlich der gleiche Bus an der nächsten Station.
-                            # Wir behalten den mit Zeit 2 (genauer/näher).
                             v_id = f"{line_name}_{direction}"
                         
-                        # 2. Fahrzeug-Typ bestimmen (für Icon)
-                        v_type = "tram" # Default
+                        v_type = "tram"
                         if "U" in line_name: v_type = "ubahn"
                         elif "A" in line_name or "Bus" in line_name: v_type = "bus"
                         
@@ -182,17 +167,12 @@ def fetch_data():
                             "type": v_type
                         }
                         
-                        # 3. Deduplizierungs-Logik
-                        # Wenn wir dieses Fahrzeug schon kennen:
+                        # Deduplizierung: Nimm das Fahrzeug mit dem kleinsten Countdown
                         if v_id in unique_vehicles:
                             existing = unique_vehicles[v_id]
-                            # Ist der neue Countdown kleiner? (Fahrzeug ist näher an einer gemessenen Station)
-                            # Dann ist diese Position "genauer" bzw. aktueller für die Visualisierung.
                             if countdown < existing["time"]:
                                 unique_vehicles[v_id] = new_entry
-                            # Sonst behalten wir den alten (kleineren) Wert.
                         else:
-                            # Neu
                             unique_vehicles[v_id] = new_entry
 
         return list(unique_vehicles.values())
@@ -207,7 +187,6 @@ with st.sidebar:
     st.header("Einstellungen")
     gps_mode = st.toggle("Echtstandort (GPS)", value=False)
     
-    # Standardwerte
     user_lat, user_lon = 48.2082, 16.3738
     
     if gps_mode:
@@ -222,19 +201,15 @@ with st.sidebar:
         else:
             st.error("Plugin fehlt.")
     else:
-        # Simulations-Modus
         sim_scenario = st.radio(
             "Szenario (Simulation):",
             ["In einer Station", "Unterwegs"],
             index=0
         )
-        
         if sim_scenario == "In einer Station":
-            # Stephansplatz Koordinaten
             user_lat, user_lon = 48.2082, 16.3738
             st.info("Standort: Stephansplatz")
         else:
-            # Irgendwo dazwischen (z.B. Ring)
             user_lat, user_lon = 48.2050, 16.3650
             st.info("Standort: Ring / Oper")
 
@@ -242,7 +217,6 @@ with st.sidebar:
 
 m = folium.Map(location=[user_lat, user_lon], zoom_start=15, tiles="CartoDB positron")
 
-# User Marker
 folium.Marker(
     [user_lat, user_lon],
     tooltip="Du bist hier",
@@ -250,29 +224,25 @@ folium.Marker(
     z_index_offset=1100
 ).add_to(m)
 
-# Routen
 for line, path in SMOOTH_ROUTES.items():
     color = LINE_COLORS.get(line, "#888")
     folium.PolyLine(path, color=color, weight=3, opacity=0.4).add_to(m)
 
-# Stationen
 for s in STATION_MARKERS:
     icon = folium.CustomIcon(ICON_STATION_B64, icon_size=(24, 14), icon_anchor=(12, 7))
     folium.Marker([s["lat"], s["lon"]], popup=s['name'], icon=icon, z_index_offset=1000).add_to(m)
 
-# Fahrzeuge
 for v in vehicles:
     lat, lon, rot = get_vehicle_position_and_rotation(v["line"], v["time"])
     
     if lat and lon:
         border_color = "#0066b3" if v["ac"] else "#d32f2f"
         
-        # Icon Wahl
         current_icon_b64 = ICON_UBAHN_B64
         width, height = 40, 12
         if v["type"] == "bus":
             current_icon_b64 = ICON_BUS_B64
-            width, height = 30, 8
+            width, height = 30, 8 # Gelenkbus Maße
         elif v["type"] == "tram":
             current_icon_b64 = ICON_TRAM_B64
             width, height = 32, 8
@@ -305,4 +275,40 @@ for v in vehicles:
             icon=folium.DivIcon(html=icon_html, icon_size=(40,40), icon_anchor=(20,20))
         ).add_to(m)
 
-st_folium(m, width="100%", height=600, returned_objects=[])
+st_folium(m, width="100%", height=500, returned_objects=[])
+
+# --- 8. TABELLE MIT ABFAHRTEN (WIEDER DA!) ---
+
+st.subheader("📋 Nächste Abfahrten")
+
+if vehicles:
+    table_data = []
+    for v in vehicles:
+        # Klima Icon Logik
+        ac_icon = "❄️" if v["ac"] else "🔥"
+        # Fahrzeug Type Icon (Text)
+        type_icon = "🚋"
+        if v["type"] == "bus": type_icon = "🚌"
+        if v["type"] == "ubahn": type_icon = "🚇"
+
+        table_data.append({
+            "Typ": type_icon,
+            "Linie": v["line"],
+            "Nach": v["dest"],
+            "Zeit": f"{v['time']} min",
+            "Ausstattung": ac_icon
+        })
+    
+    df = pd.DataFrame(table_data)
+    st.dataframe(
+        df, 
+        column_config={
+            "Typ": st.column_config.TextColumn("Typ", width="small"),
+            "Linie": st.column_config.TextColumn("Linie", width="small"),
+            "Zeit": st.column_config.TextColumn("In", width="small"),
+        },
+        hide_index=True, 
+        use_container_width=True
+    )
+else:
+    st.info("Keine Fahrzeuge in der unmittelbaren Umgebung gefunden.")
